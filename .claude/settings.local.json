@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "WebFetch(domain:taytay-1213.github.io)",
+      "Bash(curl -sL --max-time 15 \"https://taytay-1213.github.io/taylor-swift-quiz/123.html\" -o /tmp/tswift-song.html)",
+      "Bash(node merge.js)",
+      "Bash(node check_lyrics.js)",
+      "WebSearch",
+      "Bash(node check_coverage.js)",
+      "Bash(node list_missing.js)",
+      "Bash(node prepare_missing.js)",
+      "Bash(node merge_all.js)",
+      "Bash(node verify_final.js)",
+      "WebFetch(domain:genius.com)",
+      "WebFetch(domain:www.songtexte.com)",
+      "WebFetch(domain:www.songfacts.com)",
+      "Bash(git init *)",
+      "Bash(gh auth *)",
+      "Bash(git remote *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git config *)"
+    ]
+  }
+}
