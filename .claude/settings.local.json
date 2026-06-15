@@ -20,7 +20,27 @@
       "Bash(git remote *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "Bash(curl -s \"https://api.github.com/repos/Taytay-1213/swiftie-test\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('Repo exists:', d.name, '| Stars:', d.stargazers_count\\)\")",
+      "Bash(curl *)",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('Private:', d.private, '| Has pages:', d.has_pages\\);\")",
+      "Bash(node -e \"let d=''; process.stdin.on\\('data',c=>d+=c\\); process.stdin.on\\('end',\\(\\)=>{const r=JSON.parse\\(d\\); console.log\\('Latest:', r[0]?.commit?.message||'N/A', '|', r[0]?.sha?.substring\\(0,7\\)||'N/A'\\)}\\)\")",
+      "Bash(ssh -T git@github.com)",
+      "Bash([ -f \"$HOME/.ssh/id_rsa.pub\" ])",
+      "Read(//c/Users/SZ/.ssh/**)",
+      "Bash(ssh-keygen -t rsa -b 4096 -f 'C:\\\\Users\\\\SZ/.ssh/id_rsa' -N '' -q)",
+      "Bash(git reset *)",
+      "Bash(git checkout *)",
+      "Bash(git rm *)",
+      "Bash(node -e \"let d=''; process.stdin.on\\('data',c=>d+=c\\); process.stdin.on\\('end',\\(\\)=>{try{const r=JSON.parse\\(d\\); console.log\\('Latest commit:', r.sha?.substring\\(0,7\\), '|', r.commit?.message\\)}catch\\(e\\){console.log\\('Error:', d.substring\\(0,200\\)\\)}}\\)\")",
+      "Bash(node -e \"let d=''; process.stdin.on\\('data',c=>d+=c\\); process.stdin.on\\('end',\\(\\)=>{try{const r=JSON.parse\\(d\\); console.log\\('Latest:', r[0]?.sha?.substring\\(0,7\\), r[0]?.commit?.message?.substring\\(0,50\\)\\)}catch\\(e\\){console.log\\('Raw:', d.substring\\(0,300\\)\\)}}\\)\")",
+      "Bash(git pull *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(gh api *)"
     ]
   }
 }
