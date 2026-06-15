@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎵 Swiftie Test · Taylor Swift 猜歌挑战</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-start: #0a0a1a;
+    --bg-end: #1a0a2e;
+    --gold: #d4af37;
+    --gold-light: #f0d060;
+    --card-bg: rgba(255,255,255,0.06);
+    --card-border: rgba(255,255,255,0.10);
+    --text: #f0e6ff;
+    --text-dim: #a090b8;
+    --correct: #4ade80;
+    --wrong: #f87171;
+    --accent-pink: #ff6b9d;
+    --accent-purple: #a78bfa;
+    --easy: #4ade80;
+    --medium: #fbbf24;
+    --hard: #f87171;
+    --expert: #a78bfa;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .star {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: #fff;
+    border-radius: 50%;
+    animation: twinkle var(--dur,3s) ease-in-out infinite alternate;
+  }
+  @keyframes twinkle { 0%{opacity:.2;transform:scale(.8)} 100%{opacity:1;transform:scale(1.2)} }
+
+  .container { position:relative; z-index:1; width:100%; max-width:540px; padding:16px; }
+  .card {
+    background:var(--card-bg); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border:1px solid var(--card-border); border-radius:28px; padding:32px 24px;
+    box-shadow:0 24px 80px rgba(0,0,0,0.5);
+  }
+  .screen { display:none; }
+  .screen.active { display:block; animation:fadeIn .45s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+
+  .logo {
+    font-family:'Playfair Display',serif; font-size:48px; font-weight:900; text-align:center;
+    background:linear-gradient(135deg,var(--gold-light),var(--gold),var(--accent-pink));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    line-height:1.1; margin-bottom:4px;
+  }
+  .subtitle { text-align:center; font-size:14px; color:var(--text-dim); letter-spacing:6px; text-transform:uppercase; margin-bottom:12px; }
+  .desc { text-align:center; color:var(--text-dim); font-size:14px; line-height:1.7; margin-bottom:24px; padding:0 4px; }
+
+  .btn {
+    display:block; width:100%; padding:16px; border:none; border-radius:16px;
+    font-size:17px; font-weight:600; cursor:pointer; transition:all .2s ease; font-family:inherit;
+  }
+  .btn:active { transform:scale(.97); }
+  .btn-primary {
+    background:linear-gradient(135deg,var(--gold),var(--gold-light)); color:#1a0a2e;
+    box-shadow:0 4px 24px rgba(212,175,55,.3);
+  }
+  .btn-primary:hover { box-shadow:0 6px 32px rgba(212,175,55,.45); transform:translateY(-2px); }
+  .btn-secondary { background:rgba(255,255,255,.08); color:var(--text); border:1px solid var(--card-border); }
+  .btn-secondary:hover { background:rgba(255,255,255,.12); }
+  .btn-sm { padding:12px 20px; width:auto; display:inline-block; font-size:14px; border-radius:12px; }
+  .btn-xs { padding:8px 16px; width:auto; display:inline-block; font-size:12px; border-radius:10px; }
+
+  .tswift-icon { text-align:center; font-size:60px; margin:8px 0 16px; animation:float 3s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+
+  /* --- DIFFICULTY SELECT --- */
+  .diff-select { display:grid; gap:10px; margin-bottom:20px; }
+  .diff-btn {
+    padding:14px 18px; border-radius:14px; border:1px solid var(--card-border);
+    background:rgba(255,255,255,.04); color:var(--text); cursor:pointer;
+    transition:all .2s ease; font-family:inherit; text-align:left; font-size:14px;
+    display:flex; align-items:center; gap:14px;
+  }
+  .diff-btn:hover { background:rgba(255,255,255,.10); border-color:rgba(255,255,255,.20); transform:translateX(4px); }
+  .diff-btn .d-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .diff-btn .d-name { font-weight:600; font-size:15px; }
+  .diff-btn .d-desc { font-size:12px; color:var(--text-dim); margin-top:2px; }
+  .diff-btn.easy .d-icon { background:rgba(74,222,128,.2); }
+  .diff-btn.medium .d-icon { background:rgba(251,191,36,.2); }
+  .diff-btn.hard .d-icon { background:rgba(248,113,113,.2); }
+  .diff-btn.expert .d-icon { background:rgba(167,139,250,.2); }
+  .diff-btn.active { border-color:var(--gold); background:rgba(212,175,55,.1); }
+
+  /* --- HUD --- */
+  .hud { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+  .hud-item { text-align:center; }
+  .hud-label { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; }
+  .hud-value { font-size:18px; font-weight:700; margin-top:2px; }
+  .hud-value.score { color:var(--gold); }
+  .hud-value.round { color:var(--accent-purple); }
+  .hud-value.streak { color:var(--accent-pink); }
+  .hud-diff { font-size:11px; padding:2px 10px; border-radius:20px; font-weight:600; }
+  .hud-diff.easy { background:rgba(74,222,128,.2); color:var(--easy); }
+  .hud-diff.medium { background:rgba(251,191,36,.2); color:var(--medium); }
+  .hud-diff.hard { background:rgba(248,113,113,.2); color:var(--hard); }
+  .hud-diff.expert { background:rgba(167,139,250,.2); color:var(--expert); }
+
+  .progress-track { height:3px; background:rgba(255,255,255,.08); border-radius:3px; margin-bottom:20px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--gold),var(--accent-pink)); border-radius:3px; transition:width .5s ease; }
+
+  /* --- PLAYER --- */
+  .player-area { text-align:center; margin-bottom:16px; }
+  .album-art {
+    width:160px; height:160px; border-radius:16px; margin:0 auto 10px;
+    background:linear-gradient(135deg,#2a1a4a,#1a0a2e);
+    display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
+    box-shadow:0 8px 40px rgba(0,0,0,.4); border:1px solid var(--card-border);
+    cursor:pointer; transition:transform .2s ease; user-select:none;
+  }
+  .album-art:hover { transform:scale(1.03); }
+  .album-art img { width:100%; height:100%; object-fit:cover; display:block; }
+  .album-art .placeholder-icon { font-size:48px; opacity:.3; }
+
+  .play-overlay {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.40); opacity:1; transition:opacity .25s ease; border-radius:16px;
+  }
+  .play-overlay .play-icon {
+    width:56px; height:56px; border-radius:50%;
+    background:rgba(212,175,55,.9); display:flex; align-items:center; justify-content:center;
+    font-size:24px; color:#1a0a2e; box-shadow:0 4px 24px rgba(212,175,55,.4);
+    transition:transform .2s ease;
+  }
+  .album-art:hover .play-icon { transform:scale(1.1); }
+  .play-overlay .stop-icon {
+    width:56px; height:56px; border-radius:50%;
+    background:rgba(248,113,113,.85); display:flex; align-items:center; justify-content:center;
+    font-size:20px; color:#fff; box-shadow:0 4px 24px rgba(248,113,113,.3);
+  }
+
+  .visualizer {
+    position:absolute; bottom:0; left:0; right:0; height:50%;
+    display:flex; align-items:flex-end; justify-content:center; gap:3px; padding:0 10px;
+    opacity:0; transition:opacity .3s; pointer-events:none;
+  }
+  .visualizer.active { opacity:1; }
+  .visualizer .bar {
+    width:3px; background:linear-gradient(to top,var(--gold),var(--accent-pink));
+    border-radius:3px 3px 0 0; animation:vizBar .55s ease-in-out infinite alternate;
+  }
+  @keyframes vizBar { 0%{height:10%} 100%{height:90%} }
+
+  .clip-info { font-size:13px; color:var(--text-dim); margin-top:4px; }
+  .clip-info .hint { font-size:11px; margin-top:4px; }
+  .clip-info .err-hint { color:#f87171; font-size:12px; margin-top:4px; display:none; }
+  .clip-info .buf-hint { color:#f0d060; font-size:12px; margin-top:4px; display:none; }
+
+  .btn-play-big {
+    display:none; width:100%; padding:12px;
+    border:2px dashed rgba(212,175,55,.4); border-radius:12px;
+    background:rgba(212,175,55,.06); color:var(--gold); font-size:15px; font-weight:600;
+    cursor:pointer; transition:all .2s ease; font-family:inherit; margin-bottom:8px;
+  }
+  .btn-play-big:hover { background:rgba(212,175,55,.12); border-color:rgba(212,175,55,.6); }
+  .btn-play-big.show { display:block; }
+
+  /* --- OPTIONS --- */
+  .options { display:grid; gap:8px; margin-bottom:12px; }
+  .option-btn {
+    padding:12px 16px; border-radius:12px; border:1px solid var(--card-border);
+    background:rgba(255,255,255,.04); color:var(--text); font-size:14px; font-weight:500;
+    cursor:pointer; transition:all .2s ease; text-align:left; font-family:inherit;
+    display:flex; align-items:center; gap:10px;
+  }
+  .option-btn .letter {
+    width:26px; height:26px; border-radius:7px; background:rgba(255,255,255,.06);
+    display:flex; align-items:center; justify-content:center; font-size:12px;
+    font-weight:700; color:var(--text-dim); flex-shrink:0;
+  }
+  .option-btn:hover:not(.disabled) { background:rgba(255,255,255,.10); border-color:rgba(255,255,255,.20); transform:translateX(4px); }
+  .option-btn.correct { background:rgba(74,222,128,.15); border-color:var(--correct); }
+  .option-btn.correct .letter { background:var(--correct); color:#000; }
+  .option-btn.wrong { background:rgba(248,113,113,.15); border-color:var(--wrong); }
+  .option-btn.wrong .letter { background:var(--wrong); color:#000; }
+  .option-btn.disabled { cursor:default; opacity:.7; }
+  .option-btn .check-icon { margin-left:auto; font-size:16px; }
+
+  /* --- FEEDBACK --- */
+  .feedback {
+    text-align:center; padding:12px; border-radius:12px; font-weight:600; font-size:14px;
+    margin-bottom:12px; opacity:0; transition:opacity .3s;
+  }
+  .feedback.show { opacity:1; }
+  .feedback.correct { background:rgba(74,222,128,.12); color:var(--correct); border:1px solid rgba(74,222,128,.20); }
+  .feedback.wrong { background:rgba(248,113,113,.12); color:var(--wrong); border:1px solid rgba(248,113,113,.20); }
+
+  .next-row { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
+
+  /* --- TIMER --- */
+  .timer-ring {
+    width:48px; height:48px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; font-weight:800; position:relative;
+  }
+  .timer-ring svg { position:absolute; transform:rotate(-90deg); }
+  .timer-ring .bg { fill:none; stroke:rgba(255,255,255,.08); stroke-width:3; }
+  .timer-ring .progress { fill:none; stroke:var(--gold); stroke-width:3; stroke-linecap:round; transition:stroke-dashoffset .3s linear; }
+
+  /* --- END --- */
+  .end-content { text-align:center; }
+  .end-score {
+    font-family:'Playfair Display',serif; font-size:64px; font-weight:900;
+    background:linear-gradient(135deg,var(--gold-light),var(--gold),var(--accent-pink));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    line-height:1; margin:8px 0;
+  }
+  .end-label { font-size:13px; color:var(--text-dim); text-transform:uppercase; letter-spacing:3px; }
+  .end-rank { font-size:20px; font-weight:700; margin:12px 0 6px; }
+  .end-msg { color:var(--text-dim); font-size:14px; margin-bottom:20px; line-height:1.6; }
+  .end-stats { display:flex; justify-content:center; gap:24px; margin:16px 0 24px; }
+  .end-stat { text-align:center; }
+  .end-stat-value { font-size:22px; font-weight:700; }
+  .end-stat-label { font-size:11px; color:var(--text-dim); margin-top:2px; }
+  .end-stat-value.gold { color:var(--gold); }
+  .end-stat-value.pink { color:var(--accent-pink); }
+  .end-stat-value.purple { color:var(--accent-purple); }
+
+  .loading-content { text-align:center; padding:40px 0; }
+  .spinner {
+    width:48px; height:48px;
+    border:3px solid rgba(255,255,255,.08); border-top-color:var(--gold);
+    border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 20px;
+  }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .loading-text { color:var(--text-dim); font-size:14px; }
+  .loading-progress { margin-top:16px; height:4px; background:rgba(255,255,255,.08); border-radius:4px; overflow:hidden; }
+  .loading-progress-bar { height:100%; width:0%; background:linear-gradient(90deg,var(--gold),var(--accent-pink)); border-radius:4px; transition:width .5s ease; }
+
+  /* --- RESPONSIVE --- */
+  body::after {
+    content: "玉簟秋 · Swiftie Test";
+    position: fixed; bottom: 3px; right: 6px;
+    font-size: 9px; color: rgba(255,255,255,0.03);
+    pointer-events: none; z-index: 9999;
+  }
+
+    /* --- MODE SELECTOR --- */
+  .mode-selector {
+    display: flex; gap: 8px; margin-bottom: 20px;
+    background: rgba(255,255,255,0.04); border-radius: 14px; padding: 4px;
+    border: 1px solid var(--card-border);
+  }
+  .mode-btn {
+    flex: 1; padding: 12px 8px; border: none; border-radius: 11px;
+    background: transparent; color: var(--text-dim); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .2s; font-family: inherit;
+  }
+  .mode-btn:hover { color: var(--text); }
+  .mode-btn.active { background: rgba(212,175,55,.15); color: var(--gold); }
+  .mode-btn .mode-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+  /* --- LYRIC GAME --- */
+  .lyric-box {
+    background: rgba(0,0,0,0.25); border-radius: 14px; padding: 24px 20px;
+    margin-bottom: 16px; text-align: center;
+    border-left: 3px solid var(--accent-pink); min-height: 80px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lyric-text {
+    font-size: 18px; line-height: 1.7; color: var(--text);
+    font-style: italic; letter-spacing: 0.3px;
+  }
+  .lyric-hint-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .lyric-hint-chip {
+    font-size: 12px; padding: 4px 12px; border-radius: 20px;
+    background: rgba(255,255,255,0.05); color: var(--text-dim);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .lyric-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  @media (max-width:480px) { .lyric-options { grid-template-columns: 1fr; } }
+  .lyric-option {
+    display: block; width: 100%; padding: 14px 16px; border-radius: 12px;
+    font-size: 14px; font-weight: 600; border: 2px solid var(--card-border);
+    background: rgba(255,255,255,0.03); color: var(--text);
+    cursor: pointer; transition: all 0.2s; font-family: inherit; text-align: left;
+  }
+  .lyric-option:hover:not(.disabled) { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.25); transform: translateX(4px); }
+  .lyric-option.disabled { cursor: default; pointer-events: none; }
+  .lyric-option.correct { background: rgba(74,222,128,.15); border-color: var(--correct); }
+  .lyric-option.wrong { background: rgba(248,113,113,.15); border-color: var(--wrong); }
+  .lyric-skip { text-align: center; margin-top: 8px; }
+  .lyric-skip-btn { color: var(--text-dim); font-size: 12px; cursor: pointer; background: none; border: none; text-decoration: underline; font-family: inherit; }
+  .lyric-skip-btn:hover { color: var(--text); }
+
+  /* --- LYRIC DIFFICULTY --- */
+  .lyric-diff-row { display: flex; gap: 8px; margin-top: 14px; }
+  .lyric-diff-row .lyric-diff-btn {
+    flex: 1; padding: 12px 10px; border-radius: 12px; border: 1px solid var(--card-border);
+    background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer;
+    transition: all .2s ease; font-family: inherit; font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: 10px; text-align: left;
+  }
+  .lyric-diff-row .lyric-diff-btn:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.20); }
+  .lyric-diff-row .lyric-diff-btn .ld-icon { font-size: 20px; flex-shrink: 0; }
+  .lyric-diff-row .lyric-diff-btn .ld-name { font-weight: 600; }
+  .lyric-diff-row .lyric-diff-btn .ld-desc { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
+  .lyric-diff-row .lyric-diff-btn.active-easy { border-color: var(--easy); background: rgba(74,222,128,.10); }
+  .lyric-diff-row .lyric-diff-btn.active-hard { border-color: var(--wrong); background: rgba(248,113,113,.10); }
+
+  @media (max-width:480px) {
+    .card { padding:20px 16px; border-radius:20px; }
+    .logo { font-size:36px; }
+    .album-art { width:130px; height:130px; }
+    .end-score { font-size:48px; }
+    .hud-value { font-size:16px; }
+    .option-btn { font-size:13px; padding:10px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="container">
+  <!-- Swiftie Test · 玉簟秋 © 2026 · 原创不易，请勿盗用 -->
+
+  <!-- ========== START ========== -->
+  <div class="card screen active" id="screen-start">
+    <div class="tswift-icon">🫶</div>
+    <div class="logo">Swiftie Test</div>
+    <div class="subtitle">Taylor Swift 猜歌挑战</div>
+    <div class="desc">
+      听歌曲片段，从选项中猜出正确的歌名。<br>
+      Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！<br>
+      <span style="font-size:14px;color:#7ecfff;">🌐 ⚡</span>
+    </div>
+
+          <div style="font-size:13px;color:var(--text-dim);margin-bottom:8px;text-align:center;font-weight:600;">
+        选择模式 🎮
+      </div>
+      <div class="mode-selector">
+        <button class="mode-btn active" id="modeListen" onclick="setMode('listen')">
+          <span class="mode-icon">🎵</span>听歌猜歌
+        </button>
+        <button class="mode-btn" id="modeLyric" onclick="setMode('lyric')">
+          <span class="mode-icon">📝</span>歌词猜歌
+        </button>
+      </div>
+
+    <div id="lyricEraSelector" style="display:none;">
+      <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;text-align:center;font-weight:600;">
+        选择专辑 📀
+      </div>
+      <div class="lyric-era-tags" id="lyricEraTags" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px;">
+        <span class="era-tag all-selected" data-era="all" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">🌟 全部</span>
+        <span class="era-tag" data-era="debut" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">💚 Taylor Swift</span>
+        <span class="era-tag" data-era="fearless" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">💛 Fearless</span>
+        <span class="era-tag" data-era="speaknow" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">💜 Speak Now</span>
+        <span class="era-tag" data-era="red" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">❤️ Red</span>
+        <span class="era-tag" data-era="1989" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">🩵 1989</span>
+        <span class="era-tag" data-era="reputation" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">🖤 reputation</span>
+        <span class="era-tag" data-era="lover" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">🩷 Lover</span>
+        <span class="era-tag" data-era="folklore" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">🩶 folklore</span>
+        <span class="era-tag" data-era="evermore" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">🤎 evermore</span>
+        <span class="era-tag" data-era="midnights" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">💙 Midnights</span>
+        <span class="era-tag" data-era="ttpd" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">🤍 TTPD</span>
+        <span class="era-tag" data-era="soundtrack" style="font-size:12px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);cursor:pointer;transition:all 0.2s;user-select:none;">🎬 影视原声</span>
+      </div>
+      <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;margin-top:12px;text-align:center;font-weight:600;">
+        歌词难度
+      </div>
+      <div class="lyric-diff-row" id="lyricDiffRow">
+        <button class="lyric-diff-btn active-easy" data-lyric-diff="easy">
+          <span class="ld-icon">🌱</span>
+          <span class="ld-name">简单版</span>
+        </button>
+        <button class="lyric-diff-btn" data-lyric-diff="hard">
+          <span class="ld-icon">💀</span>
+          <span class="ld-name">困难版</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="listenDiffSection">
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:14px;text-align:center;font-weight:600;">
+      选择难度 🎯
+    </div>
+    <div class="diff-select">
+      <button class="diff-btn easy active" data-diff="easy" onclick="selectDifficulty('easy',this)">
+        <div class="d-icon">🌱</div>
+        <div><div class="d-name">简单 · Easy</div><div class="d-desc">播放 10 秒 · 4 选项 · 显示专辑名提示</div></div>
+      </button>
+      <button class="diff-btn medium" data-diff="medium" onclick="selectDifficulty('medium',this)">
+        <div class="d-icon">🔥</div>
+        <div><div class="d-name">中等 · Medium</div><div class="d-desc">播放 7 秒 · 5 选项 · 有提示</div></div>
+      </button>
+      <button class="diff-btn hard" data-diff="hard" onclick="selectDifficulty('hard',this)">
+        <div class="d-icon">💀</div>
+        <div><div class="d-name">困难 · Hard</div><div class="d-desc">播放 5 秒 · 6 选项 · 有提示？？</div></div>
+      </button>
+      <button class="diff-btn expert" data-diff="expert" onclick="selectDifficulty('expert',this)">
+        <div class="d-icon">👑</div>
+        <div><div class="d-name">专家 · Expert</div><div class="d-desc">播放 3 秒 · 6 选项 · 限时 10 秒 · 有提示？？</div></div>
+      </button>
+      <button class="diff-btn" data-diff="nightmare" onclick="selectDifficulty('nightmare',this)">
+        <div class="d-icon">💀</div>
+        <div><div class="d-name">噩梦 · Nightmare</div><div class="d-desc">播放 1 秒 · 6 选项 · 限时 6.5 秒 · 每题 30 分 · 有提示？？</div></div>
+      </button>
+    </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:10px;">
+      <button class="btn btn-primary" onclick="startGame()" style="flex:1;">✨ 开始游戏</button>
+    </div>
+    <div style="text-align:center;">
+      <button class="btn btn-xs btn-secondary" onclick="showLeaderboard()">🏆 排行榜</button>
+      <button class="btn btn-xs btn-secondary" onclick="showStats()">📊 我的数据</button>
+    </div>
+  </div>
+
+  <!-- ========== LOADING ========== -->
+  <div class="card screen" id="screen-loading">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loadingText">正在搜索 Taylor Swift 歌曲库...</div>
+      <div class="loading-progress"><div class="loading-progress-bar" id="loadingBar"></div></div>
+    </div>
+  </div>
+
+  <!-- ========== GAME ========== -->
+  <div class="card screen" id="screen-game">
+    <div class="hud">
+      <div class="hud-item">
+        <div class="hud-label">得分</div>
+        <div class="hud-value score" id="scoreDisplay">0</div>
+      </div>
+      <div class="hud-item">
+        <div class="hud-label">题目</div>
+        <div class="hud-value round" id="roundDisplay">1/15</div>
+      </div>
+      <div class="hud-item">
+        <div class="hud-label">🔥 连对</div>
+        <div class="hud-value streak" id="streakDisplay">0</div>
+      </div>
+      <div class="hud-item" id="timerContainer" style="display:none;">
+        <div class="timer-ring" id="timerRing">
+          <svg width="48" height="48"><circle class="bg" cx="24" cy="24" r="20"/><circle class="progress" id="timerCircle" cx="24" cy="24" r="20"/></svg>
+          <span id="timerText">10</span>
+        </div>
+      </div>
+      <div><span class="hud-diff easy" id="diffBadge">EASY</span></div>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+
+    <div class="player-area" id="player-area">
+      <div class="album-art" id="albumArt">
+        <span class="placeholder-icon">🎵</span>
+        <div class="play-overlay show" id="playOverlay">
+          <div class="play-icon" id="playIcon">▶</div>
+        </div>
+        <div class="visualizer" id="visualizer"></div>
+      </div>
+      <div class="clip-info">
+        <span id="albumInfo">🔊 点击封面播放片段</span>
+        <div class="buf-hint" id="bufHint">⏳ 音频加载中...</div>
+        <div class="err-hint" id="errHint">⚠️ 音频加载失败，可重试</div>
+        <div class="hint" id="proxyHint" style="display:none;font-size:11px;margin-top:4px;color:#7ecfff;">⚡ 已切换代理模式</div>
+        <div class="hint" id="hintText">提示: 1-6 选题 · R 重听</div>
+      </div>
+      <button class="btn-play-big" id="btnPlayBig" onclick="togglePlay()">▶ 点击播放</button>
+    </div>
+
+        <!-- LYRIC MODE (hidden unless lyric mode) -->
+    <div id="lyricGameArea" style="display:none;">
+      <div class="lyric-box">
+        <p class="lyric-text" id="lyricText"></p>
+      </div>
+      <div class="lyric-hint-row" id="lyricHintRow"></div>
+      <div class="lyric-options" id="lyricOptionsGrid"></div>
+      <div class="skip-hint" id="lyricSkipArea" style="display:block;">
+        <button class="lyric-skip-btn" onclick="skipLyricQuestion()">跳过此题 (−1分)</button>
+      </div>
+    </div>
+    <div class="feedback" id="feedback"></div>
+
+    <div class="options" id="options"></div>
+
+    <div class="next-row" id="nextRow">
+      <button class="btn btn-sm btn-secondary" onclick="replayClip()">🔁 再听一次</button>
+    </div>
+  </div>
+
+  <!-- ========== END ========== -->
+  <div class="card screen" id="screen-end">
+    <div class="end-content">
+      <div class="end-label">🎉 挑战完成</div>
+      <div class="end-score" id="finalScore">0</div>
+      <div style="font-size:13px;color:var(--text-dim);margin-bottom:6px;">总分</div>
+      <div class="end-rank" id="rankDisplay">🌙 Swiftie</div>
+      <div class="end-msg" id="rankMsg">还不错哦！</div>
+      <div class="end-stats">
+        <div class="end-stat"><div class="end-stat-value gold" id="statCorrect">0/15</div><div class="end-stat-label">答对</div></div>
+        <div class="end-stat"><div class="end-stat-value pink" id="statStreak">0</div><div class="end-stat-label">最长连对</div></div>
+        <div class="end-stat"><div class="end-stat-value purple" id="statAccuracy">0%</div><div class="end-stat-label">正确率</div></div>
+      </div>
+      <div style="font-size:13px;color:var(--text-dim);margin-bottom:16px;" id="endDiffInfo"></div>
+      <button class="btn btn-primary" onclick="startGame()">🔄 再来一局</button>
+      <button class="btn btn-sm btn-secondary" style="margin-top:8px;" onclick="showStart()">🏠 返回首页</button>
+    </div>
+  </div>
+
+  <!-- ========== LEADERBOARD ========== -->
+  <div class="card screen" id="screen-leaderboard">
+    <div style="text-align:center;">
+      <div style="font-size:28px;margin-bottom:6px;">🏆</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:2px;">排行榜</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:16px;">本地最高分记录</div>
+      <div id="leaderboardContent" style="max-height:360px;overflow-y:auto;">
+        <div style="color:var(--text-dim);font-size:14px;padding:20px 0;">暂无记录，快去玩一局！</div>
+      </div>
+      <button class="btn btn-sm btn-secondary" onclick="showStart()" style="margin-top:12px;">🏠 返回</button>
+    </div>
+  </div>
+
+  <!-- ========== STATS ========== -->
+  <div class="card screen" id="screen-stats">
+    <div style="text-align:center;">
+      <div style="font-size:28px;margin-bottom:6px;">📊</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:2px;">我的数据</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:16px;">所有局数累计统计</div>
+      <div id="statsContent">
+        <div style="color:var(--text-dim);font-size:14px;padding:20px 0;">暂无数据</div>
+      </div>
+      <button class="btn btn-sm btn-secondary" onclick="showStart()" style="margin-top:12px;">🏠 返回</button>
+    </div>
+  </div>
+
+</div>
+
+<audio id="audioPlayer" preload="none"></audio>
+
+<script>
+// =====================================================
+//  COMPLETE DISCOGRAPHY – ALL Taylor Swift songs (140+)
+// =====================================================
+const SONG_DATABASE = [
+  // === Taylor Swift (2006) ===
+  { title:"Tim McGraw", album:"Taylor Swift" },
+  { title:"Teardrops on My Guitar", album:"Taylor Swift" },
+  { title:"Our Song", album:"Taylor Swift" },
+  { title:"Picture to Burn", album:"Taylor Swift" },
+  { title:"Should've Said No", album:"Taylor Swift" },
+  { title:"Mary's Song (Oh My My My)", album:"Taylor Swift" },
+  { title:"Stay Beautiful", album:"Taylor Swift" },
+  { title:"A Place in This World", album:"Taylor Swift" },
+  { title:"Cold as You", album:"Taylor Swift" },
+  { title:"The Outside", album:"Taylor Swift" },
+  { title:"Tied Together with a Smile", album:"Taylor Swift" },
+
+  // === Fearless (2008) ===
+  { title:"Love Story", album:"Fearless" },
+  { title:"You Belong With Me", album:"Fearless" },
+  { title:"Fifteen", album:"Fearless" },
+  { title:"White Horse", album:"Fearless" },
+  { title:"Fearless", album:"Fearless" },
+  { title:"Hey Stephen", album:"Fearless" },
+  { title:"Breathe", album:"Fearless" },
+  { title:"Tell Me Why", album:"Fearless" },
+  { title:"You're Not Sorry", album:"Fearless" },
+  { title:"The Way I Loved You", album:"Fearless" },
+  { title:"Forever & Always", album:"Fearless" },
+  { title:"The Best Day", album:"Fearless" },
+  { title:"Change", album:"Fearless" },
+  { title:"Jump Then Fall", album:"Fearless (Platinum)" },
+  { title:"Untouchable", album:"Fearless (Platinum)" },
+  { title:"Come in with the Rain", album:"Fearless (Platinum)" },
+  { title:"SuperStar", album:"Fearless (Platinum)" },
+  { title:"The Other Side of the Door", album:"Fearless (Platinum)" },
+  { title:"Today Was a Fairytale", album:"Fearless (Platinum)" },
+
+  // === Speak Now (2010) ===
+  { title:"Mine", album:"Speak Now" },
+  { title:"Sparks Fly", album:"Speak Now" },
+  { title:"Back to December", album:"Speak Now" },
+  { title:"Speak Now", album:"Speak Now" },
+  { title:"Dear John", album:"Speak Now" },
+  { title:"Mean", album:"Speak Now" },
+  { title:"The Story of Us", album:"Speak Now" },
+  { title:"Never Grow Up", album:"Speak Now" },
+  { title:"Enchanted", album:"Speak Now" },
+  { title:"Better than Revenge", album:"Speak Now" },
+  { title:"Innocent", album:"Speak Now" },
+  { title:"Haunted", album:"Speak Now" },
+  { title:"Last Kiss", album:"Speak Now" },
+  { title:"Long Live", album:"Speak Now" },
+  { title:"Ours", album:"Speak Now (Deluxe)" },
+  { title:"Superman", album:"Speak Now (Deluxe)" },
+
+  // === Red (2012) ===
+  { title:"State of Grace", album:"Red" },
+  { title:"Red", album:"Red" },
+  { title:"Treacherous", album:"Red" },
+  { title:"I Knew You Were Trouble", album:"Red" },
+  { title:"All Too Well", album:"Red" },
+  { title:"22", album:"Red" },
+  { title:"I Almost Do", album:"Red" },
+  { title:"We Are Never Ever Getting Back Together", album:"Red" },
+  { title:"Stay Stay Stay", album:"Red" },
+  { title:"The Last Time", album:"Red" },
+  { title:"Holy Ground", album:"Red" },
+  { title:"Sad Beautiful Tragic", album:"Red" },
+  { title:"The Lucky One", album:"Red" },
+  { title:"Everything Has Changed", album:"Red" },
+  { title:"Starlight", album:"Red" },
+  { title:"Begin Again", album:"Red" },
+  { title:"The Moment I Knew", album:"Red (Deluxe)" },
+  { title:"Come Back... Be Here", album:"Red (Deluxe)" },
+  { title:"Girl at Home", album:"Red (Deluxe)" },
+  { title:"Ronan", album:"Red (Deluxe)" },
+  { title:"Better Man", album:"Red (Deluxe)" },
+  { title:"Nothing New", album:"Red (Taylor's Version)" },
+  { title:"I Bet You Think About Me", album:"Red (TV)" },
+  { title:"Message in a Bottle", album:"Red (TV)" },
+
+  // === 1989 (2014) ===
+  { title:"Welcome to New York", album:"1989" },
+  { title:"Blank Space", album:"1989" },
+  { title:"Style", album:"1989" },
+  { title:"Out of the Woods", album:"1989" },
+  { title:"All You Had to Do Was Stay", album:"1989" },
+  { title:"Shake It Off", album:"1989" },
+  { title:"I Wish You Would", album:"1989" },
+  { title:"Bad Blood", album:"1989" },
+  { title:"Wildest Dreams", album:"1989" },
+  { title:"How You Get the Girl", album:"1989" },
+  { title:"This Love", album:"1989" },
+  { title:"I Know Places", album:"1989" },
+  { title:"Clean", album:"1989" },
+  { title:"Wonderland", album:"1989 (Deluxe)" },
+  { title:"You Are in Love", album:"1989 (Deluxe)" },
+  { title:"New Romantics", album:"1989 (Deluxe)" },
+  { title:"Slut!", album:"1989 (Taylor's Version)" },
+  { title:"Say Don't Go", album:"1989 (TV)" },
+  { title:"Now That We Don't Talk", album:"1989 (TV)" },
+  { title:"Suburban Legends", album:"1989 (TV)" },
+  { title:"Is It Over Now?", album:"1989 (TV)" },
+
+  // === Reputation (2017) ===
+  { title:"...Ready for It?", album:"Reputation" },
+  { title:"End Game", album:"Reputation" },
+  { title:"I Did Something Bad", album:"Reputation" },
+  { title:"Don't Blame Me", album:"Reputation" },
+  { title:"Delicate", album:"Reputation" },
+  { title:"Look What You Made Me Do", album:"Reputation" },
+  { title:"So It Goes...", album:"Reputation" },
+  { title:"Gorgeous", album:"Reputation" },
+  { title:"Getaway Car", album:"Reputation" },
+  { title:"King of My Heart", album:"Reputation" },
+  { title:"Dancing with Our Hands Tied", album:"Reputation" },
+  { title:"Dress", album:"Reputation" },
+  { title:"This Is Why We Can't Have Nice Things", album:"Reputation" },
+  { title:"Call It What You Want", album:"Reputation" },
+  { title:"New Year's Day", album:"Reputation" },
+
+  // === Lover (2019) ===
+  { title:"I Forgot That You Existed", album:"Lover" },
+  { title:"Cruel Summer", album:"Lover" },
+  { title:"Lover", album:"Lover" },
+  { title:"The Man", album:"Lover" },
+  { title:"The Archer", album:"Lover" },
+  { title:"I Think He Knows", album:"Lover" },
+  { title:"Miss Americana & the Heartbreak Prince", album:"Lover" },
+  { title:"Paper Rings", album:"Lover" },
+  { title:"Cornelia Street", album:"Lover" },
+  { title:"Death by a Thousand Cuts", album:"Lover" },
+  { title:"London Boy", album:"Lover" },
+  { title:"Soon You'll Get Better", album:"Lover" },
+  { title:"False God", album:"Lover" },
+  { title:"You Need to Calm Down", album:"Lover" },
+  { title:"Afterglow", album:"Lover" },
+  { title:"ME!", album:"Lover" },
+  { title:"It's Nice to Have a Friend", album:"Lover" },
+  { title:"Daylight", album:"Lover" },
+
+  // === Folklore (2020) ===
+  { title:"the 1", album:"Folklore" },
+  { title:"cardigan", album:"Folklore" },
+  { title:"the last great american dynasty", album:"Folklore" },
+  { title:"exile", album:"Folklore" },
+  { title:"my tears ricochet", album:"Folklore" },
+  { title:"mirrorball", album:"Folklore" },
+  { title:"seven", album:"Folklore" },
+  { title:"august", album:"Folklore" },
+  { title:"this is me trying", album:"Folklore" },
+  { title:"illicit affairs", album:"Folklore" },
+  { title:"invisible string", album:"Folklore" },
+  { title:"betty", album:"Folklore" },
+  { title:"the lakes", album:"Folklore (Deluxe)" },
+
+  // === Evermore (2020) ===
+  { title:"willow", album:"Evermore" },
+  { title:"champagne problems", album:"Evermore" },
+  { title:"gold rush", album:"Evermore" },
+  { title:"'tis the damn season", album:"Evermore" },
+  { title:"tolerate it", album:"Evermore" },
+  { title:"no body, no crime", album:"Evermore" },
+  { title:"happiness", album:"Evermore" },
+  { title:"dorothea", album:"Evermore" },
+  { title:"ivy", album:"Evermore" },
+  { title:"cowboy like me", album:"Evermore" },
+  { title:"long story short", album:"Evermore" },
+  { title:"evermore", album:"Evermore" },
+  { title:"right where you left me", album:"Evermore (Deluxe)" },
+  { title:"it's time to go", album:"Evermore (Deluxe)" },
+
+  // === Midnights (2022) ===
+  { title:"Lavender Haze", album:"Midnights" },
+  { title:"Maroon", album:"Midnights" },
+  { title:"Anti-Hero", album:"Midnights" },
+  { title:"Snow on the Beach", album:"Midnights" },
+  { title:"You're on Your Own, Kid", album:"Midnights" },
+  { title:"Midnight Rain", album:"Midnights" },
+  { title:"Question...?", album:"Midnights" },
+  { title:"Vigilante Shit", album:"Midnights" },
+  { title:"Bejeweled", album:"Midnights" },
+  { title:"Labyrinth", album:"Midnights" },
+  { title:"Karma", album:"Midnights" },
+  { title:"Sweet Nothing", album:"Midnights" },
+  { title:"Mastermind", album:"Midnights" },
+  { title:"The Great War", album:"Midnights (3am)" },
+  { title:"Would've, Could've, Should've", album:"Midnights (3am)" },
+  { title:"Dear Reader", album:"Midnights (3am)" },
+  { title:"Hits Different", album:"Midnights (Deluxe)" },
+  { title:"You're Losing Me", album:"Midnights (Deluxe)" },
+
+  // === The Tortured Poets Department (2024) ===
+  { title:"Fortnight", album:"The Tortured Poets Department" },
+  { title:"The Tortured Poets Department", album:"TTPD" },
+  { title:"My Boy Only Breaks His Favorite Toys", album:"TTPD" },
+  { title:"Down Bad", album:"TTPD" },
+  { title:"So Long, London", album:"TTPD" },
+  { title:"But Daddy I Love Him", album:"TTPD" },
+  { title:"Fresh Out the Slammer", album:"TTPD" },
+  { title:"Florida!!!", album:"TTPD" },
+  { title:"Guilty as Sin?", album:"TTPD" },
+  { title:"Who's Afraid of Little Old Me?", album:"TTPD" },
+  { title:"I Can Fix Him (No Really I Can)", album:"TTPD" },
+  { title:"loml", album:"TTPD" },
+  { title:"I Can Do It With a Broken Heart", album:"TTPD" },
+  { title:"The Smallest Man Who Ever Lived", album:"TTPD" },
+  { title:"The Alchemy", album:"TTPD" },
+  { title:"Clara Bow", album:"TTPD" },
+  { title:"The Black Dog", album:"TTPD (Anthology)" },
+  { title:"imgonnagetyouback", album:"TTPD (Anthology)" },
+  { title:"The Albatross", album:"TTPD (Anthology)" },
+  { title:"Chloe or Sam or Sophia or Marcus", album:"TTPD (Anthology)" },
+  { title:"How Did It End?", album:"TTPD (Anthology)" },
+  { title:"So High School", album:"TTPD (Anthology)" },
+  { title:"I Hate It Here", album:"TTPD (Anthology)" },
+  { title:"thanK you aIMee", album:"TTPD (Anthology)" },
+  { title:"The Prophecy", album:"TTPD (Anthology)" },
+  { title:"Cassandra", album:"TTPD (Anthology)" },
+  { title:"Peter", album:"TTPD (Anthology)" },
+  { title:"The Bolter", album:"TTPD (Anthology)" },
+  { title:"Robin", album:"TTPD (Anthology)" },
+  { title:"The Manuscript", album:"TTPD (Anthology)" },
+  // === Folklore missing ===
+  { title:"epiphany", album:"Folklore" },
+  { title:"peace", album:"Folklore" },
+  { title:"hoax", album:"Folklore" },
+  // === Evermore missing ===
+  { title:"coney island", album:"Evermore" },
+  { title:"marjorie", album:"Evermore" },
+  { title:"closure", album:"Evermore" },
+  // === Midnights 3am Edition ===
+  { title:"Paris", album:"Midnights (3am Edition)" },
+  { title:"High Infidelity", album:"Midnights (3am Edition)" },
+  { title:"Glitch", album:"Midnights (3am Edition)" },
+  // === Fearless (Taylor's Version) Vault ===
+  { title:"You All Over Me", album:"Fearless (Taylor's Version)" },
+  { title:"That's When", album:"Fearless (Taylor's Version)" },
+  { title:"Don't You", album:"Fearless (Taylor's Version)" },
+  { title:"Bye Bye Baby", album:"Fearless (Taylor's Version)" },
+  { title:"Mr. Perfectly Fine", album:"Fearless (Taylor's Version)" },
+  { title:"We Were Happy", album:"Fearless (Taylor's Version)" },
+  // === Red (Taylor's Version) Vault ===
+  { title:"Run", album:"Red (Taylor's Version)" },
+  // === Soundtracks & Singles ===
+  { title:"Crazier", album:"Soundtrack" },
+  { title:"Eyes Open", album:"Soundtrack" },
+  { title:"Safe and Sound", album:"Soundtrack" },
+  { title:"Sweeter than Fiction", album:"Soundtrack" },
+  { title:"I Don't Wanna Live Forever", album:"Soundtrack" },
+  { title:"Christmas Tree Farm", album:"Holiday" },
+  { title:"Only the Young", album:"Soundtrack" },
+  { title:"Carolina", album:"Soundtrack" },
+  { title:"The Alcott", album:"Soundtrack" },
+];
+
+
+const LYRICS_POOL = [
+  { lyric:"I'm just a girl, trying to find a place in this world", song:"A Place in This World", era:"debut", hint:"2006 · 自传体早期作品" },
+  { lyric:"I'll be strong, I'll be wrong, oh but life goes on", song:"A Place in This World", era:"debut", hint:"2006 · 关于成长的困惑" },
+  { lyric:"And you come away with a great little story of a mess of a dreamer with the nerve to adore you", song:"Cold as You", era:"debut", hint:"2006 · Track 5 传统开启" },
+  { lyric:"I'll be 87, you'll be 89", song:"Mary's Song (Oh My My My)", era:"debut", hint:"2006 · 青梅竹马的爱情故事" },
+  { lyric:"Our song is the slamming screen door, sneakin' out late, tapping on your window", song:"Our Song", era:"debut", hint:"2006 · 经典独奏曲目" },
+  { lyric:"So watch me strike a match on all my wasted time", song:"Picture to Burn", era:"debut", hint:"2006 · 出道单曲" },
+  { lyric:"You should've said no, you should've gone home", song:"Should've Said No", era:"debut", hint:"2006 · 出道单曲" },
+  { lyric:"Cory's eyes are like a jungle, he smiles it's like the radio", song:"Stay Beautiful", era:"debut", hint:"2006 · 暗恋日记" },
+  { lyric:"He's the reason for the teardrops on my guitar", song:"Teardrops on My Guitar", era:"debut", hint:"2006 · 出道首单" },
+  { lyric:"I've been the one with a smile but I've been the one on the outside", song:"The Outside", era:"debut", hint:"2006 · 局外人的孤独" },
+  { lyric:"Seems the only one who doesn't see your beauty is you", song:"Tied Together with a Smile", era:"debut", hint:"2006 · 写给朋友的鼓励" },
+  { lyric:"He said the way my blue eyes shined put those Georgia stars to shame that night", song:"Tim McGraw", era:"debut", hint:"2006 · 出道首单" },
+  { lyric:"When you think Tim McGraw, I hope you think my favorite song", song:"Tim McGraw", era:"debut", hint:"2006 · 怀旧乡村风" },
+  { lyric:"I can't breathe without you but I have to", song:"Breathe", era:"fearless", hint:"2008 · 与 Colbie Caillat 合作" },
+  { lyric:"Bye bye baby I didn't know that you'd be the one to lose", song:"Bye Bye Baby", era:"fearless", hint:"2021 · 车站告别" },
+  { lyric:"Tonight we'll stand get off our knees", song:"Change", era:"fearless", hint:"2008 · 奥运会主题推广曲" },
+  { lyric:"I've got to stand on my own two feet", song:"Come in with the Rain", era:"fearless", hint:"2009 · 白金版加曲" },
+  { lyric:"Don't you smile at me and ask me how I've been", song:"Don't You", era:"fearless", hint:"2021 · 重逢前任的尴尬" },
+  { lyric:"You take my hand and drag me head first, fearless", song:"Fearless", era:"fearless", hint:"2008 · 专辑同名曲" },
+  { lyric:"'Cause when you're fifteen and somebody tells you they love you, you're gonna believe them", song:"Fifteen", era:"fearless", hint:"2008 · 致高一青涩岁月" },
+  { lyric:"I've found time can heal most anything", song:"Fifteen", era:"fearless", hint:"2008 · 挚友 Abigail 的故事" },
+  { lyric:"It rains when you're here and it rains when you're gone", song:"Forever & Always", era:"fearless", hint:"2008 · 分手后的即兴创作" },
+  { lyric:"I can't help it if you look like an angel", song:"Hey Stephen", era:"fearless", hint:"2008 · 写给暗恋男生的情书" },
+  { lyric:"Jump then fall into me", song:"Jump Then Fall", era:"fearless", hint:"2009 · 白金版加曲" },
+  { lyric:"Romeo, take me somewhere we can be alone", song:"Love Story", era:"fearless", hint:"2008 · 全球大热单曲" },
+  { lyric:"Mr. Perfectly Fine how's your heart after breaking mine", song:"Mr. Perfectly Fine", era:"fearless", hint:"2021 · 完美前男友假面" },
+  { lyric:"You don't even know how special you are", song:"SuperStar", era:"fearless", hint:"2009 · 写给歌迷的情书" },
+  { lyric:"I'm sick and tired of your attitude", song:"Tell Me Why", era:"fearless", hint:"2008 · 受够了你的态度" },
+  { lyric:"That's when I'll be waiting at the front gate", song:"That's When", era:"fearless", hint:"2021 · 与 Keith Urban 合作" },
+  { lyric:"I'm five years old it's getting cold I've got my big coat on", song:"The Best Day", era:"fearless", hint:"2008 · 献给母亲 Andrea" },
+  { lyric:"And I'll scream and I'll cry for you", song:"The Other Side of the Door", era:"fearless", hint:"2009 · 白金版加曲" },
+  { lyric:"But I miss screaming and fighting and kissing in the rain", song:"The Way I Loved You", era:"fearless", hint:"2008 · 怀念轰轰烈烈的爱情" },
+  { lyric:"Today was a fairytale you were the prince", song:"Today Was a Fairytale", era:"fearless", hint:"2010 · Valentine's Day 电影主题曲" },
+  { lyric:"Untouchable burning brighter than the sun", song:"Untouchable", era:"fearless", hint:"2009 · 翻唱改编自 Luna Halo" },
+  { lyric:"I can't remember anything I couldn't live without", song:"We Were Happy", era:"fearless", hint:"2021 · 曾经的美好时光" },
+  { lyric:"This is a big world, that was a small town", song:"White Horse", era:"fearless", hint:"2008 · 童话终究破灭" },
+  { lyric:"I'm still a believer but I don't know why", song:"You All Over Me", era:"fearless", hint:"2021 · Vault 弃曲" },
+  { lyric:"She's cheer captain and I'm on the bleachers", song:"You Belong With Me", era:"fearless", hint:"2008 · 邻家女孩经典叙事" },
+  { lyric:"She wears short skirts, I wear T-shirts", song:"You Belong With Me", era:"fearless", hint:"2008 · 白金大热单曲" },
+  { lyric:"You're on the phone with your girlfriend, she's upset", song:"You Belong With Me", era:"fearless", hint:"2008 · 卧室窗前的对话" },
+  { lyric:"You're not sorry no no no", song:"You're Not Sorry", era:"fearless", hint:"2008 · CSI 插曲" },
+  { lyric:"I'm not the one you'll sweep off her feet, lead her up the stairwell", song:"White Horse", era:"fearless", hint:"2008 · 童话终究破灭" },
+  { lyric:"She's better known for the things that she does on the mattress", song:"Better than Revenge", era:"speaknow", hint:"2010 · 争议性复仇曲" },
+  { lyric:"I'm shining like fireworks over your sad, empty town", song:"Dear John", era:"speaknow", hint:"2010 · 史诗级长篇 Track 5" },
+  { lyric:"This night is sparkling, don't you let it go", song:"Enchanted", era:"speaknow", hint:"2010 · Wonderstruck 灵感源泉" },
+  { lyric:"Please don't be in love with someone else", song:"Enchanted", era:"speaknow", hint:"2010 · 充满宿命感的一见钟情" },
+  { lyric:"Come on come on don't leave me like this", song:"Haunted", era:"speaknow", hint:"2010 · 管弦乐编曲" },
+  { lyric:"Today is never too late to be brand new", song:"Innocent", era:"speaknow", hint:"2010 · 写给 Kanye 的 VMAs 事件" },
+  { lyric:"And I'll watch your life in pictures like I used to watch you sleep", song:"Last Kiss", era:"speaknow", hint:"2010 · 心碎的告别" },
+  { lyric:"Long live the walls we crashed through", song:"Long Live", era:"speaknow", hint:"2010 · 献给乐手与粉丝的赞歌" },
+  { lyric:"I had the time of my life fighting dragons with you", song:"Long Live", era:"speaknow", hint:"2010 · 巡演紫海高潮" },
+  { lyric:"Someday I'll be big enough so you can't hit me", song:"Mean", era:"speaknow", hint:"2010 · 格莱美最佳乡村歌曲" },
+  { lyric:"You made a rebel of a careless man's careful daughter", song:"Mine", era:"speaknow", hint:"2010 · 充满叙事感的首单" },
+  { lyric:"Don't ever grow up just stay this way", song:"Never Grow Up", era:"speaknow", hint:"2010 · 致童年" },
+  { lyric:"People throw rocks at things that shine", song:"Ours", era:"speaknow", hint:"2010 · 豪华版加曲" },
+  { lyric:"Drop everything now, meet me in the pouring rain", song:"Sparks Fly", era:"speaknow", hint:"2010 · 震撼的开场吉他" },
+  { lyric:"I am not the kind of girl who should be rudely barging in on a white veil occasion", song:"Speak Now", era:"speaknow", hint:"2010 · 抢婚想象曲" },
+  { lyric:"Tall dark and superman", song:"Superman", era:"speaknow", hint:"2010 · 豪华版加曲" },
+  { lyric:"The story of us looks a lot like a tragedy now", song:"The Story of Us", era:"speaknow", hint:"2010 · 颁奖礼后台的尴尬相遇" },
+  { lyric:"I don't know about you but I'm feeling 22", song:"22", era:"red", hint:"2012 · 生日派对国歌" },
+  { lyric:"So casually cruel in the name of being honest", song:"All Too Well", era:"red", hint:"2012 · 乐评与粉丝心中的无冕之神" },
+  { lyric:"You call me up again just to break me like a promise", song:"All Too Well", era:"red", hint:"2012 · 围巾回忆" },
+  { lyric:"I'd like to be my old self again, but I'm still trying to find it", song:"All Too Well", era:"red", hint:"2012 · 抒情巅峰之作" },
+  { lyric:"And you've still got it in your drawer even now", song:"All Too Well", era:"red", hint:"2012 · 留存在那里的红围巾" },
+  { lyric:"I've been spending the last eight months thinking all love ever does is break and burn and end", song:"Begin Again", era:"red", hint:"2012 · 巴黎咖啡馆的周三" },
+  { lyric:"I just miss you and I wish you were a better man", song:"Better Man", era:"red", hint:"2012 · Little Big Town 翻唱版获奖" },
+  { lyric:"Come back be here", song:"Come Back... Be Here", era:"red", hint:"2012 · 异国异地恋" },
+  { lyric:"All I know is we said hello", song:"Everything Has Changed", era:"red", hint:"2012 · 与 Ed Sheeran 合作" },
+  { lyric:"Don't look at me you got a girl at home", song:"Girl at Home", era:"red", hint:"2012 · 警告有主渣男" },
+  { lyric:"Tonight I'm gonna dance for all that we've been through", song:"Holy Ground", era:"red", hint:"2012 · 粉丝挚爱的翻唱曲" },
+  { lyric:"I almost do", song:"I Almost Do", era:"red", hint:"2012 · 忍住不打电话的挣扎" },
+  { lyric:"I bet you think about me", song:"I Bet You Think About Me", era:"red", hint:"2021 · Blake Lively 执导 MV" },
+  { lyric:"And I knew you were trouble when you walked in", song:"I Knew You Were Trouble", era:"red", hint:"2012 · 狂野的 Dubstep 风格尝试" },
+  { lyric:"This is a message in a bottle", song:"Message in a Bottle", era:"red", hint:"2021 · 合成器流行风" },
+  { lyric:"How can a person know everything at 18 but nothing at 22", song:"Nothing New", era:"red", hint:"2021 · 与 Phoebe Bridgers 合作" },
+  { lyric:"Loving him is like driving a new Maserati down a dead-end street", song:"Red", era:"red", hint:"2012 · 惊艳的色彩比喻" },
+  { lyric:"You were my best four years", song:"Ronan", era:"red", hint:"2012 · 纪念患癌离世的小男孩" },
+  { lyric:"Run run run", song:"Run", era:"red", hint:"2021 · 与 Ed Sheeran 再合作" },
+  { lyric:"A sad beautiful tragic love affair", song:"Sad Beautiful Tragic", era:"red", hint:"2012 · 催泪抒情曲" },
+  { lyric:"We could get married have ten kids and teach 'em how to dream", song:"Starlight", era:"red", hint:"2012 · 受 Bobby Kennedy 启发" },
+  { lyric:"This is the golden age of something good and right and real", song:"State of Grace", era:"red", hint:"2012 · U2 摇滚风开场" },
+  { lyric:"I'm pretty sure we almost broke up last night", song:"Stay Stay Stay", era:"red", hint:"2012 · 乌克丽丽欢快小调" },
+  { lyric:"This is the last time I'm asking you this", song:"The Last Time", era:"red", hint:"2012 · 与 Snow Patrol 主唱合作" },
+  { lyric:"They tell you that you're lucky but you're so confused", song:"The Lucky One", era:"red", hint:"2012 · 名人辛酸史" },
+  { lyric:"Standing there in my party dress and no one came", song:"The Moment I Knew", era:"red", hint:"2012 · 21岁生日派对" },
+  { lyric:"This slope is treacherous this path is reckless", song:"Treacherous", era:"red", hint:"2012 · 粉丝最爱的桥梁段" },
+  { lyric:"We are never ever getting back together", song:"We Are Never Ever Getting Back Together", era:"red", hint:"2012 · 职业生涯首支冠单" },
+  { lyric:"People like you always want back the love they gave away", song:"All You Had to Do Was Stay", era:"1989", hint:"2014 · 经典的高音 Sample" },
+  { lyric:"Band-aids don't fix bullet holes", song:"Bad Blood", era:"1989", hint:"2014 · 气势磅礴的复仇之歌" },
+  { lyric:"But I've got a blank space, baby, and I'll write your name", song:"Blank Space", era:"1989", hint:"2014 · 对媒体妖魔化形象的顶级讽刺" },
+  { lyric:"Nice to meet you, where you been?", song:"Blank Space", era:"1989", hint:"2014 · 统治榜单的复古神曲" },
+  { lyric:"I'm a nightmare dressed like a daydream", song:"Blank Space", era:"1989", hint:"2014 · 标志性自嘲歌词" },
+  { lyric:"I think I'm finally clean", song:"Clean", era:"1989", hint:"2014 · 与 Imogen Heap 合作" },
+  { lyric:"That's how you get the girl", song:"How You Get the Girl", era:"1989", hint:"2014 · 追回女友指南" },
+  { lyric:"In the dead of night, your eyes so green", song:"I Know Places", era:"1989", hint:"2014 · 躲避狗仔的地下恋情" },
+  { lyric:"I wish you would come back", song:"I Wish You Would", era:"1989", hint:"2014 · 合成器复古风" },
+  { lyric:"Is it over now", song:"Is It Over Now?", era:"1989", hint:"2023 · 粉丝最爱的 Vault 桥段" },
+  { lyric:"Heartbreak is the national anthem, we sing it proudly", song:"New Romantics", era:"1989", hint:"2014 · 绝美加曲，巡演高光" },
+  { lyric:"Now that we don't talk", song:"Now That We Don't Talk", era:"1989", hint:"2023 · 最短 Vault 曲" },
+  { lyric:"The monsters turned out to be just trees", song:"Out of the Woods", era:"1989", hint:"2014 · 充满焦虑感的极简副歌" },
+  { lyric:"Why'd you have to say don't go", song:"Say Don't Go", era:"1989", hint:"2023 · Vault 弃曲" },
+  { lyric:"Haters gonna hate hate hate hate hate", song:"Shake It Off", era:"1989", hint:"2014 · 首支冠单" },
+  { lyric:"If I'm gonna be drunk might as well be drunk in love", song:"Slut!", era:"1989", hint:"2023 · 重塑荡妇羞辱" },
+  { lyric:"When we go crashing down, we come back every time", song:"Style", era:"1989", hint:"2014 · 永不过时的编曲" },
+  { lyric:"We never go out of style", song:"Style", era:"1989", hint:"2014 · 经典的时尚印记" },
+  { lyric:"You got that James Dean daydream look in your eye", song:"Style", era:"1989", hint:"2014 · 充满电影感的开场白" },
+  { lyric:"I am your suburban legend", song:"Suburban Legends", era:"1989", hint:"2023 · 校园爱情传说" },
+  { lyric:"This love came back to me", song:"This Love", era:"1989", hint:"2014 · The Summer I Turned Pretty 插曲" },
+  { lyric:"Welcome to New York it's been waiting for you", song:"Welcome to New York", era:"1989", hint:"2014 · 纽约移居开场曲" },
+  { lyric:"Say you'll remember me standing in a nice dress staring at the sunset babe", song:"Wildest Dreams", era:"1989", hint:"2014 · 1950年代 MV" },
+  { lyric:"We found wonderland", song:"Wonderland", era:"1989", hint:"2014 · 爱丽丝梦游仙境隐喻" },
+  { lyric:"You are in love true love", song:"You Are in Love", era:"1989", hint:"2014 · 受 Jack&Lena 启发" },
+  { lyric:"Baby let the games begin", song:"...Ready for It?", era:"reputation", hint:"2017 · 黑暗开场曲" },
+  { lyric:"I want to wear his initial on a chain round my neck", song:"Call It What You Want", era:"reputation", hint:"2017 · 最私人的情书" },
+  { lyric:"I loved you in spite of deep fears that the world would divide us", song:"Dancing with Our Hands Tied", era:"reputation", hint:"2017 · 强风暴雨下的暗恋" },
+  { lyric:"My reputation's never been worse, so you must like me for me", song:"Delicate", era:"reputation", hint:"2017 · 废墟中的脆弱告白" },
+  { lyric:"Is it cool that I said all that? Is it chill that you're in my head?", song:"Delicate", era:"reputation", hint:"2017 · 声码器营造的低语" },
+  { lyric:"This ain't for the best, my reputation's never been worse", song:"Delicate", era:"reputation", hint:"2017 · 极具辨识度的前奏呼喊" },
+  { lyric:"I once was poison ivy, but now I'm your daisy", song:"Don't Blame Me", era:"reputation", hint:"2017 · 充满宗教救赎感的教堂唱腔" },
+  { lyric:"I don't want you like a best friend", song:"Dress", era:"reputation", hint:"2017 · 派对散场后的秘密" },
+  { lyric:"Big reputation, big reputation, ooh you and me we got big reputations", song:"End Game", era:"reputation", hint:"2017 · 强强联手的嘻哈尝试" },
+  { lyric:"I'm in a getaway car I left you in a motel bar", song:"Getaway Car", era:"reputation", hint:"2017 · Bonnie and Clyde" },
+  { lyric:"You're so gorgeous I can't say anything to your face", song:"Gorgeous", era:"reputation", hint:"2017 · 醉酒表白短信" },
+  { lyric:"If a man talks shit then I owe him nothing", song:"I Did Something Bad", era:"reputation", hint:"2017 · 女巫审判" },
+  { lyric:"King of my heart body and soul", song:"King of My Heart", era:"reputation", hint:"2017 · 你是我心中的王" },
+  { lyric:"But I got smarter, I got harder in the nick of time", song:"Look What You Made Me Do", era:"reputation", hint:"2017 · 暗黑回归的暗号" },
+  { lyric:"I'm sorry, the old Taylor can't come to the phone right now. Why? Oh, 'cause she's dead!", song:"Look What You Made Me Do", era:"reputation", hint:"2017 · 震撼流行乐坛的电话独白" },
+  { lyric:"Honey, I rose up from the dead, I do it all the time", song:"Look What You Made Me Do", era:"reputation", hint:"2017 · 浴火重生的女王宣言" },
+  { lyric:"There's glitter on the floor after the party", song:"New Year's Day", era:"reputation", hint:"2017 · 派对后的清晨" },
+  { lyric:"You know I'm not a bad girl but I do bad things with you", song:"So It Goes...", era:"reputation", hint:"2017 · 亲密隐喻" },
+  { lyric:"This is why we can't have nice things darling because you break them", song:"This Is Why We Can't Have Nice Things", era:"reputation", hint:"2017 · 泳池派对崩塌" },
+  { lyric:"Meet me in the afterglow", song:"Afterglow", era:"lover", hint:"2019 · 吵架后的歉意" },
+  { lyric:"I hope I never lose you hope it never ends I'd never walk Cornelia Street again", song:"Cornelia Street", era:"lover", hint:"2019 · 纽约西村租房" },
+  { lyric:"And I scream for whatever it's worth: I love you, ain't that the worst thing you ever heard?", song:"Cruel Summer", era:"lover", hint:"2019 · 封神的绝美 Bridge 呐喊" },
+  { lyric:"He looks up grinning like a devil", song:"Cruel Summer", era:"lover", hint:"2019 · 霸榜逆袭的夏日限定" },
+  { lyric:"Devils roll the dice, angels roll their eyes", song:"Cruel Summer", era:"lover", hint:"2019 · 痛苦又令人沉溺的暗恋" },
+  { lyric:"I once believed love would be black and white but it's golden", song:"Daylight", era:"lover", hint:"2019 · 整专收官金句" },
+  { lyric:"Saying goodbye is death by a thousand cuts", song:"Death by a Thousand Cuts", era:"lover", hint:"2019 · Netflix 电影启发" },
+  { lyric:"We might just be in the clear but we're still in the false god", song:"False God", era:"lover", hint:"2019 · 性感爵士风" },
+  { lyric:"I forgot that you existed", song:"I Forgot That You Existed", era:"lover", hint:"2019 · 最高级的无视" },
+  { lyric:"I think he knows he better lock it down", song:"I Think He Knows", era:"lover", hint:"2019 · 新欢的甜蜜羞涩" },
+  { lyric:"It's nice to have a friend", song:"It's Nice to Have a Friend", era:"lover", hint:"2019 · 青梅竹马三分钟" },
+  { lyric:"I love my London boy", song:"London Boy", era:"lover", hint:"2019 · Camden Market 回忆" },
+  { lyric:"Can I go where you go? Can we always be this close?", song:"Lover", era:"lover", hint:"2019 · 复古浪漫的婚礼舞曲" },
+  { lyric:"You're my, my, my, my lover", song:"Lover", era:"lover", hint:"2019 · 充满粉红泡泡的同名曲" },
+  { lyric:"I'm the only one of me, baby that's the fun of me", song:"ME!", era:"lover", hint:"2019 · 充满多巴胺的快乐首单" },
+  { lyric:"It's you and me, that's my whole world", song:"Miss Americana & the Heartbreak Prince", era:"lover", hint:"2019 · 借高中校园外壳包装的政治隐喻" },
+  { lyric:"I hate accidents except when we went from friends to this", song:"Paper Rings", era:"lover", hint:"2019 · 欢快复古的朋克流行" },
+  { lyric:"I like shiny things, but I'd marry you with paper rings", song:"Paper Rings", era:"lover", hint:"2019 · 真挚热烈的浪漫宣言" },
+  { lyric:"Soon you'll get better", song:"Soon You'll Get Better", era:"lover", hint:"2019 · 献给患癌母亲" },
+  { lyric:"I've been the archer I've been the prey", song:"The Archer", era:"lover", hint:"2019 · Track 5 自省之作" },
+  { lyric:"I'm so sick of running as fast as I can wondering if I'd get there quicker if I was a man", song:"The Man", era:"lover", hint:"2019 · 性别双重标准" },
+  { lyric:"You need to calm down, you're being too loud", song:"You Need to Calm Down", era:"lover", hint:"2019 · 极具色彩斑斓的平权之歌" },
+  { lyric:"August slipped away into a moment in time", song:"august", era:"folklore", hint:"2020 · 哀而不伤的夏日海风" },
+  { lyric:"To live for the hope of it all, cancel plans just in case you'd call", song:"august", era:"folklore", hint:"2020 · 毫无保留的卑微追寻" },
+  { lyric:"I'm only 17 I don't know anything but I know I miss you", song:"betty", era:"folklore", hint:"2020 · 17岁的道歉" },
+  { lyric:"And when I felt like I was an old cardigan under someone's bed, you put me on and said I was your favorite", song:"cardigan", era:"folklore", hint:"2020 · 虚构三角恋的詹姆斯视角" },
+  { lyric:"I knew you'd linger like a tattoo kiss", song:"cardigan", era:"folklore", hint:"2020 · 斩获格莱美提名的神曲" },
+  { lyric:"You drew stars around my scars", song:"cardigan", era:"folklore", hint:"2020 · 绝美的治愈系意象" },
+  { lyric:"Only 20 minutes to sleep but you dream of some epiphany", song:"epiphany", era:"folklore", hint:"2020 · 疫情前线致敬" },
+  { lyric:"I can see you standing, honey, with his arms around your body", song:"exile", era:"folklore", hint:"2020 · 极度深沉的男女对唱" },
+  { lyric:"You're not my homeland anymore, so what am I defending now?", song:"exile", era:"folklore", hint:"2020 · 充满博弈感的分手博弈" },
+  { lyric:"I think I've seen this film before, and I didn't like the ending", song:"exile", era:"folklore", hint:"2020 · 经典的电影终章比喻" },
+  { lyric:"My only one my smoking gun", song:"hoax", era:"folklore", hint:"2020 · 破碎的信任" },
+  { lyric:"Don't call me kid don't call me baby", song:"illicit affairs", era:"folklore", hint:"2020 · 禁忌之恋" },
+  { lyric:"All along there was some invisible string tying you to me", song:"invisible string", era:"folklore", hint:"2020 · 命运的红线" },
+  { lyric:"I'm still a believer, but I don't know why", song:"mirrorball", era:"folklore", hint:"2020 · 将自己比作迪斯科反光球的讨好人格" },
+  { lyric:"And if I'm dead to you why are you at the wake", song:"my tears ricochet", era:"folklore", hint:"2020 · 幽灵的葬礼" },
+  { lyric:"All these people think love's for show but I would die for you in secret", song:"peace", era:"folklore", hint:"2020 · 安静的承诺" },
+  { lyric:"I think your house is haunted your dad is always mad and that must be why", song:"seven", era:"folklore", hint:"2020 · 童年友谊的纯真" },
+  { lyric:"I'm doing good, I'm on some new shit", song:"the 1", era:"folklore", hint:"2020 · 疫情期间空降的民谣开场" },
+  { lyric:"You know the greatest loves of all time are over now", song:"the 1", era:"folklore", hint:"2020 · 释怀而忧伤的开篇" },
+  { lyric:"Take me to the lakes where all the poets went to die", song:"the lakes", era:"folklore", hint:"2020 · 诗人隐居地" },
+  { lyric:"I had a marvelous time ruining everything", song:"the last great american dynasty", era:"folklore", hint:"2020 · 讲述豪宅前主人 Rebekah 的传奇一生" },
+  { lyric:"They told me all of my cages were mental so I got wasted like all my potential", song:"this is me trying", era:"folklore", hint:"2020 · 隐藏的挣扎" },
+  { lyric:"There's an ache in you, put there by the ache in me", song:"'tis the damn season", era:"evermore", hint:"2020 · 圣诞假期返乡的旧情复燃" },
+  { lyric:"She would've made such a lovely bride, what a shame she's fucked in the head", song:"champagne problems", era:"evermore", hint:"2020 · 演唱会万众齐喊的顶级 Bridge" },
+  { lyric:"Your Midas touch on the Chevy door, November flush and your flannel cure", song:"champagne problems", era:"evermore", hint:"2020 · 冬日法兰绒的细腻叙事" },
+  { lyric:"Don't treat me like some situation that needs to be handled", song:"closure", era:"evermore", hint:"2020 · 假装的释怀" },
+  { lyric:"Sorry for not making you my centerfold", song:"coney island", era:"evermore", hint:"2020 · The National 合作" },
+  { lyric:"Forever is the sweetest con", song:"cowboy like me", era:"evermore", hint:"2020 · 骗子遇上骗子" },
+  { lyric:"Dorothea do you ever stop and think about me", song:"dorothea", era:"evermore", hint:"2020 · 小镇出走的女孩" },
+  { lyric:"And I was catching my breath, staring out an open window catching my death", song:"evermore", era:"evermore", hint:"2020 · 钢琴与假音交织的史诗二重唱" },
+  { lyric:"I don't like slow motion double vision in rose blush", song:"gold rush", era:"evermore", hint:"2020 · 暗恋幻想曲" },
+  { lyric:"There is different people inside you and different people inside me", song:"happiness", era:"evermore", hint:"2020 · 离婚后的和解" },
+  { lyric:"Sometimes giving up is the strong thing", song:"it's time to go", era:"evermore", hint:"2020 · 知道何时离开" },
+  { lyric:"My house of stone your ivy grows and now I'm covered in you", song:"ivy", era:"evermore", hint:"2020 · 秘密出轨" },
+  { lyric:"I think he did it but I just can't prove it", song:"no body, no crime", era:"evermore", hint:"2020 · HAIM 合作谋杀案" },
+  { lyric:"No more keeping score, now I just keep you warm", song:"long story short", era:"evermore", hint:"2020 · 轻舟已过万重山的释怀" },
+  { lyric:"Never be so polite forget your power", song:"marjorie", era:"evermore", hint:"2020 · 怀念外婆 Marjorie" },
+  { lyric:"Help I'm still at the restaurant", song:"right where you left me", era:"evermore", hint:"2020 · 时间静止在餐厅" },
+  { lyric:"I made you my temple, my mural, my sky", song:"tolerate it", era:"evermore", hint:"2020 · 令人窒息的无私奉献 Track 5" },
+  { lyric:"I know my love should be celebrated, but you tolerate it", song:"tolerate it", era:"evermore", hint:"2020 · 处于不对等天平上的心碎" },
+  { lyric:"Gain the weight of you then lose it, believe me I could do it", song:"tolerate it", era:"evermore", hint:"2020 · 灵感源自文学小说的情感荒漠" },
+  { lyric:"I come back stronger than a 90's trend", song:"willow", era:"evermore", hint:"2020 · 充满林间仙气的灵动旋律" },
+  { lyric:"Life was a willow and it bent right to your wind", song:"willow", era:"evermore", hint:"2020 · 顺应爱意的温柔流淌" },
+  { lyric:"I'm the problem, it's me", song:"Anti-Hero", era:"midnights", hint:"2022 · 极具网感的全网爆火神曲" },
+  { lyric:"It's me, hi. I'm the problem, it's me", song:"Anti-Hero", era:"midnights", hint:"2022 · 自嘲式的午夜自省" },
+  { lyric:"Did you hear my covert narcissism I disguise as altruism?", song:"Anti-Hero", era:"midnights", hint:"2022 · 血淋淋的自我剖析" },
+  { lyric:"I have this thing where I get older but just never wiser", song:"Anti-Hero", era:"midnights", hint:"2022 · 凌晨三点的精神内耗" },
+  { lyric:"I can still make the whole place shimmer", song:"Bejeweled", era:"midnights", hint:"2022 · 闪闪发光的复出自信" },
+  { lyric:"What's a girl gonna do? A diamond's gotta shine", song:"Bejeweled", era:"midnights", hint:"2022 · 极具趣味的电音节奏" },
+  { lyric:"Never take advice from someone who's falling apart", song:"Dear Reader", era:"midnights", hint:"2022 · 给读者的忠告" },
+  { lyric:"We were supposed to be just friends", song:"Glitch", era:"midnights", hint:"2022 · 意外的爱情故障" },
+  { lyric:"I was dancing around dancing around it", song:"High Infidelity", era:"midnights", hint:"2022 · 出轨坦白" },
+  { lyric:"I can't tie a knot but I can tie a tourniquet", song:"Hits Different", era:"midnights", hint:"2022 · 心碎止血带" },
+  { lyric:"Karma is a cat, purring in my lap 'cause it loves me", song:"Karma", era:"midnights", hint:"2022 · 脑洞大开的猫奴因果论" },
+  { lyric:"Karma is the guy on the screen coming straight home to me", song:"Karma", era:"midnights", hint:"2022 · 甜蜜骄傲的改词现场" },
+  { lyric:"I'm falling in love again", song:"Labyrinth", era:"midnights", hint:"2022 · 再次坠入爱河的恐惧" },
+  { lyric:"All they keep asking me is if I'm gonna be your bride", song:"Lavender Haze", era:"midnights", hint:"2022 · 保护爱情不受外界干扰" },
+  { lyric:"And I wake with your memory over me, that's a real fucking legacy", song:"Maroon", era:"midnights", hint:"2022 · 深红演变为褐红的迷幻叙事" },
+  { lyric:"The burgundy on my T-shirt when you splashed your wine into me", song:"Maroon", era:"midnights", hint:"2022 · 宿醉后的红酒回忆" },
+  { lyric:"What if I told you none of it was accidental", song:"Mastermind", era:"midnights", hint:"2022 · 一切都是精心策划" },
+  { lyric:"He wanted it comfortable I wanted that pain", song:"Midnight Rain", era:"midnights", hint:"2022 · 截然不同的人生方向" },
+  { lyric:"Let the only flashing be the camera", song:"Paris", era:"midnights", hint:"2022 · 巴黎幻想逃离" },
+  { lyric:"Did you ever have someone kiss you in a crowded room", song:"Question...?", era:"midnights", hint:"2022 · 午夜的好奇提问" },
+  { lyric:"Snow on the beach weird but f**king beautiful", song:"Snow on the Beach", era:"midnights", hint:"2022 · Lana Del Rey 合作" },
+  { lyric:"All that you ever wanted from me was sweet nothing", song:"Sweet Nothing", era:"midnights", hint:"2022 · 写给 Joe 的温柔小情歌" },
+  { lyric:"All's fair in love and poetry", song:"The Great War", era:"midnights", hint:"2022 · 爱情如战争" },
+  { lyric:"I don't dress for women I don't dress for men", song:"Vigilante Shit", era:"midnights", hint:"2022 · 复仇女神" },
+  { lyric:"I regret you all the time", song:"Would've, Could've, Should've", era:"midnights", hint:"2022 · 19岁的隐秘伤疤" },
+  { lyric:"Give me back my girlhood, it was mine first", song:"Would've, Could've, Should've", era:"midnights", hint:"2022 · 3am 版本的顶级情感宣泄" },
+  { lyric:"I wouldn't marry me either", song:"You're Losing Me", era:"midnights", hint:"2022 · 爱正在消亡" },
+  { lyric:"You're on your own, kid. You always have been", song:"You're on Your Own, Kid", era:"midnights", hint:"2022 · 催泪的友谊手绳发源地" },
+  { lyric:"I gave my blood, sweat, and tears for this", song:"You're on Your Own, Kid", era:"midnights", hint:"2022 · 拼尽全力的追梦独白" },
+  { lyric:"I'm having his baby no I'm not but you should see your faces", song:"But Daddy I Love Him", era:"ttpd", hint:"2024 · 挑衅保守派" },
+  { lyric:"When the truth comes out it's black and blue", song:"Cassandra", era:"ttpd", hint:"2024 · 没人相信的先知" },
+  { lyric:"You said some things that you can't unsay", song:"Chloe or Sam or Sophia or Marcus", era:"ttpd", hint:"2024 · 可互换的名字" },
+  { lyric:"You look like Stevie Nicks in '75, the hair and lips", song:"Clara Bow", era:"ttpd", hint:"2024 · 代代相传的时代红颜史诗" },
+  { lyric:"Did you really beam me up in a cloud of sparkling dust", song:"Down Bad", era:"ttpd", hint:"2024 · 被外星人抛弃" },
+  { lyric:"You can beat the heat if you beat the charges too", song:"Florida!!!", era:"ttpd", hint:"2024 · 佛州逃亡" },
+  { lyric:"I was a functioning alcoholic till nobody noticed my new aesthetic", song:"Fortnight", era:"ttpd", hint:"2024 · 沉郁迷幻的黑白开篇" },
+  { lyric:"And for a fortnight there we were forever running", song:"Fortnight", era:"ttpd", hint:"2024 · 梦幻电音双人对唱" },
+  { lyric:"Fresh out the slammer I know who my first call will be to", song:"Fresh Out the Slammer", era:"ttpd", hint:"2024 · 重获自由" },
+  { lyric:"What if I roll the stone away they're gonna crucify me anyway", song:"Guilty as Sin?", era:"ttpd", hint:"2024 · 禁忌的欲望" },
+  { lyric:"We defiled the altar went at it alone the vultures descended picked at the bones", song:"How Did It End?", era:"ttpd", hint:"2024 · 分手后的围观" },
+  { lyric:"I'm so depressed I act like it's my birthday every day", song:"I Can Do It With a Broken Heart", era:"ttpd", hint:"2024 · 强颜欢笑的终极打工人赞歌" },
+  { lyric:"I cry a lot but I am so productive", song:"I Can Do It With a Broken Heart", era:"ttpd", hint:"2024 · 闪耀舞台背后的心碎高产" },
+  { lyric:"I can fix him, no really I can", song:"I Can Fix Him (No Really I Can)", era:"ttpd", hint:"2024 · 黑色幽默式的自我催眠" },
+  { lyric:"I hate it here so I will go to secret gardens in my mind", song:"I Hate It Here", era:"ttpd", hint:"2024 · 精神逃离" },
+  { lyric:"Even if it's handcuffed, I'm leaving here with you", song:"imgonnagetyouback", era:"ttpd", hint:"2024 · 既爱又恨的戏剧张力" },
+  { lyric:"You said I'm the love of your life but I'm just the girl who got away", song:"loml", era:"ttpd", hint:"2024 · 一生挚爱的缩写" },
+  { lyric:"I'm queen of sandcastles he destroys", song:"My Boy Only Breaks His Favorite Toys", era:"ttpd", hint:"2024 · 他摧毁最爱玩具" },
+  { lyric:"Said you were gonna grow up then you were gonna come find me", song:"Peter", era:"ttpd", hint:"2024 · 永远不会长大的男孩" },
+  { lyric:"You have no idea what you just did to me", song:"Robin", era:"ttpd", hint:"2024 · 童年的昵称" },
+  { lyric:"You know how to ball, I know Aristotle", song:"So High School", era:"ttpd", hint:"2024 · 回到青春期的热烈爱恋" },
+  { lyric:"You swore that you loved me but where were the clues", song:"So Long, London", era:"ttpd", hint:"2024 · 告别伦敦" },
+  { lyric:"There's a bronze spray tan statue of you on my lawn", song:"thanK you aIMee", era:"ttpd", hint:"2024 · 大写的感谢信" },
+  { lyric:"I'm the albatross I'm here to destroy your life", song:"The Albatross", era:"ttpd", hint:"2024 · 古老诅咒" },
+  { lyric:"Where's the trophy? He just comes running over to me", song:"The Alchemy", era:"ttpd", hint:"2024 · 足球隐喻" },
+  { lyric:"Old habits die screaming", song:"The Black Dog", era:"ttpd", hint:"2024 · 酒吧定位带来的绝望高音" },
+  { lyric:"She's the bolter she's the one who got away", song:"The Bolter", era:"ttpd", hint:"2024 · 逃跑的新娘" },
+  { lyric:"The only thing that's left is the manuscript", song:"The Manuscript", era:"ttpd", hint:"2024 · 故事的最后一页" },
+  { lyric:"Please I've been on my knees change the prophecy", song:"The Prophecy", era:"ttpd", hint:"2024 · 恳求改写命运" },
+  { lyric:"And I don't even want you back I just want to know if rusting my sparkling summer was the goal", song:"The Smallest Man Who Ever Lived", era:"ttpd", hint:"2024 · 史上最渺小的男人" },
+  { lyric:"You're not Dylan Thomas, I'm not Patti Smith", song:"The Tortured Poets Department", era:"ttpd", hint:"2024 · 充满文学自嘲的同名轨" },
+  { lyric:"Who uses typewriters anyway?", song:"The Tortured Poets Department", era:"ttpd", hint:"2024 · 充满复古调侃的核心意象" },
+  { lyric:"Who's afraid of little old me? Well you should be", song:"Who's Afraid of Little Old Me?", era:"ttpd", hint:"2024 · 温柔的威胁" },
+  { lyric:"Carolina knows why for years I've been saying I'm fine", song:"Carolina", era:"soundtrack", hint:"2022 · 沼泽深处的女孩" },
+  { lyric:"Baby it's Christmas and I'm just missing home", song:"Christmas Tree Farm", era:"soundtrack", hint:"2019 · 童年圣诞树农场回忆" },
+  { lyric:"I've never been crazier than when I fell for you", song:"Crazier", era:"soundtrack", hint:"2009 · Hannah Montana 电影" },
+  { lyric:"Keep your eyes open", song:"Eyes Open", era:"soundtrack", hint:"2012 · 饥饿游戏" },
+  { lyric:"I don't wanna live forever cause I know I'll be living in vain", song:"I Don't Wanna Live Forever", era:"soundtrack", hint:"2016 · Fifty Shades Darker 与 Zayn" },
+  { lyric:"Only the young can run", song:"Only the Young", era:"soundtrack", hint:"2020 · Miss Americana 纪录片" },
+  { lyric:"Just close your eyes the sun is going down you'll be alright no one can hurt you now", song:"Safe and Sound", era:"soundtrack", hint:"2012 · 格莱美提名·饥饿游戏" },
+  { lyric:"There you'll stand ten feet tall I will say I knew it all along", song:"Sweeter than Fiction", era:"soundtrack", hint:"2013 · One Chance 电影 · 金球奖提名" },
+  { lyric:"I sit in The Alcott and I'm waiting for you", song:"The Alcott", era:"soundtrack", hint:"2023 · 与 The National 合作" },
+];
+
+// ====================== LYRIC GAME STATE ======================
+const LYRIC_TOTAL = 10;
+let lyricState = {};
+let lyricDifficulty = 'easy'; // 'easy' = lyrics contain song title, 'hard' = lyrics don't contain song title
+
+function isLyricContainsTitle(item) {
+  const cleanTitle = item.song.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+  const cleanLyric = item.lyric.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+  return cleanLyric.includes(cleanTitle);
+}
+
+// ====================== LYRIC GAME FUNCTIONS ======================
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function lyricPickQuestions(selectedEras, lyricDiff) {
+  let pool = LYRICS_POOL;
+  if (selectedEras && !selectedEras.includes('all')) {
+    pool = LYRICS_POOL.filter(item => selectedEras.includes(item.era));
+  }
+  // Filter by lyric difficulty
+  if (lyricDiff === 'easy') {
+    pool = pool.filter(item => isLyricContainsTitle(item));
+  } else if (lyricDiff === 'hard') {
+    pool = pool.filter(item => !isLyricContainsTitle(item));
+  }
+  // Fallback: if not enough items after filtering, use full pool
+  if (pool.length < 4) pool = LYRICS_POOL;
+  const shuffled = shuffle([...pool]);
+  const picked = [];
+  const usedSongs = new Set();
+  for (const item of shuffled) {
+    if (picked.length >= LYRIC_TOTAL) break;
+    if (usedSongs.has(item.song) && pool.length > LYRIC_TOTAL) continue;
+    usedSongs.add(item.song);
+    picked.push(item);
+  }
+  while (picked.length < LYRIC_TOTAL) {
+    picked.push(pool[Math.floor(Math.random() * pool.length)]);
+  }
+  return picked;
+}
+
+function lyricGenerateOptions(correctItem) {
+  const wrongPool = LYRICS_POOL.filter(item => item.song !== correctItem.song);
+  const shuffled = shuffle([...wrongPool]);
+  const wrongs = [];
+  for (const item of shuffled) {
+    if (wrongs.length >= 3) break;
+    if (!wrongs.find(w => w.song === item.song)) wrongs.push(item);
+  }
+  while (wrongs.length < 3) {
+    const extra = LYRICS_POOL.filter(item => item.song !== correctItem.song && !wrongs.find(w => w.song === item.song));
+    if (!extra.length) break;
+    wrongs.push(extra[0]);
+  }
+  return shuffle([correctItem, ...wrongs]);
+}
+
+function lyricRenderQuestion() {
+  if (lyricState.currentIndex >= LYRIC_TOTAL) { lyricShowResults(); return; }
+  const q = lyricState.questions[lyricState.currentIndex];
+  lyricState.answered = false;
+  document.getElementById('scoreDisplay').textContent = lyricState.score;
+  document.getElementById('roundDisplay').textContent = (lyricState.currentIndex + 1) + '/' + LYRIC_TOTAL;
+  document.getElementById('streakDisplay').textContent = lyricState.currentStreak;
+  document.getElementById('progressFill').style.width = ((lyricState.currentIndex) / LYRIC_TOTAL * 100) + '%';
+  document.getElementById('lyricText').textContent = q.lyric;
+  document.getElementById('lyricHintRow').innerHTML = '<span class="lyric-hint-chip">📀 ' + q.hint + '</span>';
+  const options = lyricGenerateOptions(q);
+  const grid = document.getElementById('lyricOptionsGrid');
+  grid.innerHTML = options.map((opt, i) =>
+    '<button class="lyric-option" data-song="' + opt.song.replace(/"/g,'&quot;') + '" data-correct="' + (opt.song === q.song) + '">'
+    + opt.song + '</button>'
+  ).join('');
+  grid.querySelectorAll('.lyric-option').forEach(btn => {
+    btn.addEventListener('click', () => lyricHandleAnswer(btn));
+  });
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('nextRow').innerHTML = '';
+  document.getElementById('lyricSkipArea').style.display = 'block';
+  document.getElementById('lyricGameArea').style.display = 'block';
+}
+
+function lyricHandleAnswer(btn) {
+  if (lyricState.answered) return;
+  lyricState.answered = true;
+  const isCorrect = btn.dataset.correct === 'true';
+  const fb = document.getElementById('feedback');
+  const allBtns = document.querySelectorAll('#lyricOptionsGrid .lyric-option');
+  allBtns.forEach(b => {
+    b.classList.add('disabled');
+    if (b.dataset.correct === 'true') b.classList.add('correct');
+  });
+  if (isCorrect) {
+    btn.classList.add('correct');
+    lyricState.score += 10;
+    lyricState.correctCount++;
+    lyricState.currentStreak++;
+    if (lyricState.currentStreak > lyricState.maxStreak) lyricState.maxStreak = lyricState.currentStreak;
+    if (lyricState.currentStreak >= 3) lyricState.score += Math.min(lyricState.currentStreak - 2, 5);
+    const msgs = ['✨ 太厉害了！','🎯 一击即中！','💯 Swiftie 认证！','🎵 满分！','⭐ 毫无疑问！','🌟 你是真粉丝！','💜 完美！','🔥 稳准狠！'];
+    fb.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+    fb.className = 'feedback show correct';
+    if (lyricState.currentStreak >= 3) fb.textContent += ' 🔥 ' + lyricState.currentStreak + '连对';
+  } else {
+    btn.classList.add('wrong');
+    lyricState.wrongCount++;
+    lyricState.currentStreak = 0;
+    const msgs = ['😢 再想想吧…','🤔 差一点！','💔 不是这首哦','🎵 继续加油！','📀 多听几遍！'];
+    fb.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+    fb.className = 'feedback show wrong';
+  }
+  document.getElementById('scoreDisplay').textContent = lyricState.score;
+  document.getElementById('streakDisplay').textContent = lyricState.currentStreak;
+  document.getElementById('lyricSkipArea').style.display = 'none';
+  const isLast = lyricState.currentIndex >= LYRIC_TOTAL - 1;
+  document.getElementById('nextRow').innerHTML =
+    '<button class="btn btn-sm btn-primary" onclick="lyricNextQuestion()">'
+    + (isLast ? '🏁 查看结果' : '➡️ 下一题') + '</button>';
+}
+
+function lyricNextQuestion() {
+  lyricState.currentIndex++;
+  if (lyricState.currentIndex >= LYRIC_TOTAL) {
+    document.getElementById('progressFill').style.width = '100%';
+    lyricShowResults(); return;
+  }
+  lyricRenderQuestion();
+}
+
+function skipLyricQuestion() {
+  if (lyricState.answered) return;
+  lyricState.score = Math.max(0, lyricState.score - 1);
+  lyricState.currentStreak = 0;
+  lyricState.skippedCount++;
+  document.getElementById('scoreDisplay').textContent = lyricState.score;
+  document.getElementById('streakDisplay').textContent = '0';
+  document.getElementById('lyricSkipArea').style.display = 'none';
+  lyricNextQuestion();
+}
+
+function lyricShowResults() {
+  showScreen('screen-end');
+  const acc = Math.round((lyricState.correctCount / LYRIC_TOTAL) * 100);
+  document.getElementById('finalScore').textContent = lyricState.score;
+  document.getElementById('statCorrect').textContent = lyricState.correctCount + '/' + LYRIC_TOTAL;
+  document.getElementById('statStreak').textContent = lyricState.maxStreak;
+  document.getElementById('statAccuracy').textContent = acc + '%';
+  const diffLabel = lyricDifficulty === 'easy' ? '🌱 简单版（歌词含歌名）' : '💀 困难版（歌词无歌名）';
+  document.getElementById('endDiffInfo').textContent = '📝 歌词猜歌模式 · ' + diffLabel + ' · 每题10分（连对加分）';
+  let rank, msg;
+  if (acc >= 100) { rank = '👑 至尊 Swiftie'; msg = '满分！所有歌词倒背如流！🫶'; }
+  else if (acc >= 90) { rank = '🌟 钻石 Swiftie'; msg = '太强了！你是真正的 Swiftie！'; }
+  else if (acc >= 75) { rank = '💎 黄金 Swiftie'; msg = '很棒！你的播放列表全是 Taylor！'; }
+  else if (acc >= 60) { rank = '🥈 白银 Swiftie'; msg = '不错不错，继续加油！'; }
+  else if (acc >= 40) { rank = '🥉 青铜 Swiftie'; msg = '还需要多听几遍哦！'; }
+  else if (acc >= 20) { rank = '🌱 萌新 Swiftie'; msg = '刚入坑吧？从 Fearless 开始补！'; }
+  else { rank = '🎧 路人'; msg = '你确定听过 Taylor Swift？😅'; }
+  document.getElementById('rankDisplay').textContent = rank;
+  document.getElementById('rankMsg').textContent = msg;
+  saveLyricGame();
+}
+
+
+// ====================== LYRIC ERA SELECTOR ======================
+const LYRIC_ERA_EMOJI = {
+  'all': '🌟', 'debut': '💚', 'fearless': '💛', 'speaknow': '💜',
+  'red': '❤️', '1989': '🩵', 'reputation': '🖤', 'lover': '🩷',
+  'folklore': '🩶', 'evermore': '🤎', 'midnights': '💙', 'ttpd': '🤍', 'soundtrack': '🎬'
+};
+let lyricSelectedEras = ['all'];
+
+document.addEventListener('click', function(e) {
+  const tag = e.target.closest('#lyricEraTags .era-tag');
+  if (!tag) return;
+  const era = tag.dataset.era;
+  if (era === 'all') {
+    document.querySelectorAll('#lyricEraTags .era-tag').forEach(t => {
+      t.style.background = 'rgba(255,255,255,0.06)';
+      t.style.color = 'var(--text-dim)';
+    });
+    tag.style.background = 'rgba(167,139,250,.2)';
+    tag.style.color = 'var(--accent-purple)';
+    lyricSelectedEras = ['all'];
+    return;
+  }
+  const allTag = document.querySelector('#lyricEraTags .era-tag[data-era="all"]');
+  allTag.style.background = 'rgba(255,255,255,0.06)';
+  allTag.style.color = 'var(--text-dim)';
+  const isSelected = tag.style.background === 'rgba(167, 139, 250, 0.2)' || tag.dataset.selected === 'true';
+  if (isSelected) {
+    tag.style.background = 'rgba(255,255,255,0.06)';
+    tag.style.color = 'var(--text-dim)';
+    tag.dataset.selected = 'false';
+  } else {
+    tag.style.background = 'rgba(167,139,250,.2)';
+    tag.style.color = 'var(--accent-purple)';
+    tag.dataset.selected = 'true';
+  }
+  lyricSelectedEras = [];
+  document.querySelectorAll('#lyricEraTags .era-tag').forEach(t => {
+    if (t.dataset.selected === 'true') lyricSelectedEras.push(t.dataset.era);
+  });
+  if (lyricSelectedEras.length === 0) {
+    lyricSelectedEras = ['all'];
+    allTag.style.background = 'rgba(167,139,250,.2)';
+    allTag.style.color = 'var(--accent-purple)';
+  }
+});
+
+// ====================== LYRIC DIFFICULTY CLICK HANDLER ======================
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('#lyricDiffRow .lyric-diff-btn');
+  if (!btn) return;
+  const diff = btn.dataset.lyricDiff;
+  lyricDifficulty = diff;
+  document.querySelectorAll('#lyricDiffRow .lyric-diff-btn').forEach(b => {
+    b.classList.remove('active-easy', 'active-hard');
+  });
+  btn.classList.add(diff === 'easy' ? 'active-easy' : 'active-hard');
+});
+
+// ====================== MODE SWITCHING ======================
+let currentMode = 'listen';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('modeListen').classList.toggle('active', mode === 'listen');
+  document.getElementById('modeLyric').classList.toggle('active', mode === 'lyric');
+  const desc = document.querySelector('#screen-start .desc');
+  const eraSelector = document.getElementById('lyricEraSelector');
+  if (mode === 'listen') {
+    desc.innerHTML = '听歌曲片段，从选项中猜出正确的歌名。<br>Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！<br><span style="font-size:14px;color:#7ecfff;">🌐 ⚡</span>';
+    document.getElementById('listenDiffSection').style.display = 'block';
+    if (eraSelector) eraSelector.style.display = 'none';
+  } else {
+    desc.innerHTML = '看歌词片段，从选项中猜出是哪首歌！<br>涵盖 Taylor Swift 所有专辑的经典歌词 📝';
+    document.getElementById('listenDiffSection').style.display = 'none';
+    if (eraSelector) eraSelector.style.display = 'block';
+  }
+}
+// =====================================================
+//  STATE
+// =====================================================
+const DIFFICULTIES = {
+  easy:   { label:'EASY', rounds:15, clipSec:10, options:4,  timer:0,  hint:'album', points:5, icon:'🌱' },
+  medium: { label:'MEDIUM', rounds:15, clipSec:7,  options:5,  timer:0,  hint:'none', points:10, icon:'🔥' },
+  hard:   { label:'HARD', rounds:15, clipSec:5,  options:6,  timer:0,  hint:'none', points:15, icon:'💀' },
+  expert: { label:'EXPERT', rounds:15, clipSec:3, options:6,  timer:10, hint:'none', points:20, icon:'👑' },
+  nightmare: { label:'NIGHTMARE', rounds:20, clipSec:1, options:6, timer:6.5, hint:'none', points:30, icon:'💀' },
+};
+
+let state = {
+  songs: [],
+  difficulty: 'easy',
+  round: 0,
+  score: 0,
+  streak: 0,
+  maxStreak: 0,
+  correctCount: 0,
+  currentSong: null,
+  options: [],
+  answered: false,
+  timerId: null,
+  timerInterval: null,
+  isPlaying: false,
+  audioFailed: false,
+  isFirstRound: true,
+  usedTitles: new Set(),
+};
+
+// =====================================================
+//  INIT
+// =====================================================
+function initStars() {
+  const c = document.getElementById('stars');
+  for (let i=0;i<80;i++) {
+    const s=document.createElement('div');
+    s.className='star';
+    s.style.left=Math.random()*100+'%';
+    s.style.top=Math.random()*100+'%';
+    s.style.setProperty('--dur',(2+Math.random()*3)+'s');
+    s.style.animationDelay=Math.random()*3+'s';
+    s.style.width=s.style.height=(1+Math.random()*2)+'px';
+    c.appendChild(s);
+  }
+}
+initStars();
+// Swiftie Test by 玉簟秋 · 原创作品，请勿盗用
+console.log('🎵 Swiftie Test · 玉簟秋 © 2026 · 原创不易');
+
+
+// =====================================================
+//  DIFFICULTY
+// =====================================================
+let selectedDifficulty = 'easy';
+
+function selectDifficulty(diff, btn) {
+  selectedDifficulty = diff;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// =====================================================
+//  SCREENS
+// =====================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showStart() { showScreen('screen-start'); }
+
+// =====================================================
+//  FETCH – get previews from iTunes API
+// =====================================================
+const CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?',
+];
+
+async function fetchOneUrl(url, timeoutMs=10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!resp.ok) throw new Error('HTTP '+resp.status);
+    return await resp.json();
+  } catch(e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
+async function fetchTaylorSongs() {
+  let data;
+  // Try direct first
+  try {
+    data = await fetchOneUrl('https://itunes.apple.com/search?term=taylor+swift&entity=song&limit=200');
+  } catch(e) {
+    console.warn('iTunes direct failed:', e.message);
+    // Try with proxies
+    for(const proxy of CORS_PROXIES) {
+      try {
+        const url=proxy+encodeURIComponent('https://itunes.apple.com/search?term=taylor+swift&entity=song&limit=200');
+        data = await fetchOneUrl(url);
+        if(data&&data.results&&data.results.length) break;
+      } catch(e2) {
+        console.warn('Proxy failed:', e2.message);
+        continue;
+      }
+    }
+    if(!data||!data.results) throw new Error('iTunes API unreachable (try turning on your VPN)');
+  }
+  if(!data.results||!data.results.length) throw new Error('No results from iTunes');
+
+  const previewMap=new Map();
+  for(const r of data.results) {
+    if(!r.previewUrl) continue;
+    const key=r.trackName.toLowerCase().replace(/[^a-z0-9]/g,'');
+    if(!previewMap.has(key)) {
+      previewMap.set(key,{previewUrl:r.previewUrl, artwork:r.artworkUrl100?.replace('100x100','300x300')});
+    }
+  }
+
+  const enriched=SONG_DATABASE.map(song=>{
+    const key=song.title.toLowerCase().replace(/[^a-z0-9]/g,'');
+    const found=previewMap.get(key);
+    return {...song, previewUrl:found?.previewUrl||null, artwork:found?.artwork||null};
+  });
+  return enriched.filter(s=>s.previewUrl);
+}
+
+// =====================================================
+//  GAME
+// =====================================================
+async function startGame() {
+  if (currentMode === 'lyric') {
+    startLyricGame();
+    return;
+  }
+  showScreen('screen-loading');
+  updateLoading('正在搜索 Taylor Swift 歌曲库...',20);
+
+  try {
+    const songs=await fetchTaylorSongs();
+    updateLoading('歌曲加载完毕 ('+songs.length+'首)，准备开始...',90);
+    if(songs.length<10) throw new Error('可用歌曲不足');
+
+    state.songs=songs;
+    state.difficulty=selectedDifficulty;
+    state.round=0;
+    state.score=0;
+    state.streak=0;
+    state.maxStreak=0;
+    state.correctCount=0;
+    state.isFirstRound=true;
+    state.usedTitles=new Set();
+
+    updateLoading('✨ '+DIFFICULTIES[selectedDifficulty].icon+' '+DIFFICULTIES[selectedDifficulty].label+' 模式！',100);
+    await sleep(400);
+    showScreen('screen-game');
+    state.isFirstRound=true;
+    nextRound();
+  } catch(err) {
+    console.error(err);
+    updateLoading('加载失败 😢',100);
+    await sleep(600);
+    showScreen('screen-start');
+    alert('⚠️ 无法获取歌曲预览\n\n请打开梯子后刷新页面重试。\n\n'+err.message);
+  }
+}
+
+function startLyricGame() {
+  lyricState = {
+    questions: lyricPickQuestions(lyricSelectedEras || ['all'], lyricDifficulty),
+    currentIndex: 0,
+    score: 0,
+    correctCount: 0,
+    wrongCount: 0,
+    skippedCount: 0,
+    currentStreak: 0,
+    maxStreak: 0,
+    answered: false,
+  };
+  showScreen('screen-game');
+  document.getElementById('scoreDisplay').textContent = '0';
+  document.getElementById('roundDisplay').textContent = '1/' + LYRIC_TOTAL;
+  document.getElementById('streakDisplay').textContent = '0';
+  document.getElementById('progressFill').style.width = '0%';
+  // Show lyric area, hide listen area
+  document.getElementById('player-area').style.display = 'none';
+  document.getElementById('lyricGameArea').style.display = 'block';
+  document.getElementById('nextRow').innerHTML = '';
+  const badge = document.getElementById('diffBadge');
+  badge.textContent = lyricDifficulty === 'easy' ? '📝 简单' : '📝 困难';
+  badge.className = lyricDifficulty === 'easy' ? 'hud-diff easy' : 'hud-diff hard';
+  document.getElementById('timerContainer').style.display = 'none';
+  lyricRenderQuestion();
+}
+
+function updateLoading(text,pct) {
+  document.getElementById('loadingText').textContent=text;
+  document.getElementById('loadingBar').style.width=Math.min(pct,100)+'%';
+}
+
+function diffConfig() { return DIFFICULTIES[state.difficulty]||DIFFICULTIES.easy; }
+
+function displaySeconds(sec) {
+  if (sec >= 1) return sec+'秒';
+  return Math.round(sec*1000)+'毫秒';
+}
+
+// =====================================================
+//  ROUND
+// =====================================================
+function nextRound() {
+  const cfg=diffConfig();
+  if(state.round>=cfg.rounds) { endGame(); return; }
+
+  state.round++;
+  state.answered=false;
+  state.audioFailed=false;
+  state.isPlaying=false;
+  if(state._useProxy===undefined) state._useProxy=false;
+
+  if(state.timerId) clearTimeout(state.timerId);
+
+  document.getElementById('scoreDisplay').textContent=state.score;
+  document.getElementById('roundDisplay').textContent=state.round+'/'+cfg.rounds;
+  document.getElementById('streakDisplay').textContent=state.streak;
+  document.getElementById('progressFill').style.width=(state.round/cfg.rounds)*100+'%';
+
+  // Ensure listen mode UI is visible, lyric mode hidden
+  document.getElementById('player-area').style.display = 'block';
+  document.getElementById('lyricGameArea').style.display = 'none';
+
+  // Diff badge
+  const badge=document.getElementById('diffBadge');
+  badge.textContent=cfg.icon+' '+cfg.label;
+  badge.className='hud-diff '+state.difficulty;
+
+  // Timer
+  if(cfg.timer>0) {
+    document.getElementById('timerContainer').style.display='block';
+    startTimer(cfg.timer);
+  } else {
+    document.getElementById('timerContainer').style.display='none';
+  }
+
+  // Hide hints
+  document.getElementById('bufHint').style.display='none';
+  document.getElementById('errHint').style.display='none';
+
+  // Pick song — no repeats within a game
+  const candidates=state.songs.filter(s=>s.previewUrl&&!state.usedTitles.has(s.title));
+  // If we've exhausted all songs, reset (shouldn't happen with 200+ songs)
+  if(candidates.length<6) state.usedTitles.clear();
+  const pool=state.songs.filter(s=>s.previewUrl&&!state.usedTitles.has(s.title));
+  const correct=pickRandom(pool);
+  state.usedTitles.add(correct.title);
+  state.currentSong=correct;
+
+  const wrongPool=state.songs.filter(s=>s.title!==correct.title&&s.previewUrl);
+  state.options=shuffle([correct,...shuffle(wrongPool).slice(0,cfg.options-1)]);
+
+  // Album art — on hard/expert/nightmare show a distractor cover to mislead
+  const artEl=document.getElementById('albumArt');
+  let artUrl = correct.artwork;
+  if(['hard','expert','nightmare'].includes(state.difficulty)) {
+    const distractors = state.options.filter(s => s.title !== correct.title && s.artwork);
+    if(distractors.length) artUrl = pickRandom(distractors).artwork;
+    else artUrl = null;
+  }
+  if(artUrl) {
+    artEl.innerHTML='<img src="'+artUrl+'" alt="'+correct.title+'">'
+      +'<div class="play-overlay show" id="playOverlay"><div class="play-icon" id="playIcon">▶</div></div>'
+      +'<div class="visualizer" id="visualizer"></div>';
+  } else {
+    artEl.innerHTML='<span class="placeholder-icon">🎵</span>'
+      +'<div class="play-overlay show" id="playOverlay"><div class="play-icon" id="playIcon">▶</div></div>'
+      +'<div class="visualizer" id="visualizer"></div>';
+  }
+  document.getElementById('albumArt').onclick=()=>togglePlay();
+
+  // Info text
+  document.getElementById('albumInfo').textContent='🔊 第'+state.round+'题 · 正在播放 ('+displaySeconds(cfg.clipSec)+')';
+
+  // Hint
+  if(cfg.hint==='album') {
+    document.getElementById('hintText').textContent='💡 提示: 正确答案出自 "~~'+correct.album+'~~" 专辑 | 1-'+cfg.options+'选题 · R重听';
+  } else {
+    document.getElementById('hintText').textContent='快捷键: 1-'+cfg.options+'选题 · R重听 · Enter下一题';
+  }
+
+  document.getElementById('btnPlayBig').classList.remove('show');
+  renderOptions();
+
+  document.getElementById('nextRow').innerHTML='<button class="btn btn-sm btn-secondary" onclick="replayClip()">🔁 再听一次</button>';
+
+  const fb=document.getElementById('feedback');
+  fb.classList.remove('show','correct','wrong');
+
+  // === SMART PLAY ===
+  // 1st round: async broke the gesture chain, so we ask user to click
+  // Subsequent rounds: "下一题" button is a user gesture, so we auto-play
+  if(state.isFirstRound) {
+    state.isFirstRound=false;
+    // Show a prominent play prompt — user must click
+    document.getElementById('albumInfo').textContent='👆 点击封面播放音频 · 第'+state.round+'题 ('+displaySeconds(cfg.clipSec)+')';
+    const bigBtn=document.getElementById('btnPlayBig');
+    bigBtn.classList.add('show');
+    bigBtn.textContent='▶ 点击开始播放';
+    // Preload the audio silently
+    const audio=document.getElementById('audioPlayer');
+    audio.src=state.currentSong.previewUrl;
+    audio.preload='auto';
+  } else {
+    playClip();
+  }
+}
+
+function renderOptions() {
+  const container=document.getElementById('options');
+  const letters='ABCDEFGHIJ'.split('');
+  const cfg=diffConfig();
+  container.innerHTML='';
+
+  const isAlbumMode = false;
+
+  state.options.forEach((song,i)=>{
+    if(i>=cfg.options) return;
+    const btn=document.createElement('button');
+    btn.className='option-btn';
+    btn.dataset.value=song.title;
+    btn.innerHTML='<span class="letter">'+letters[i]+'</span><span>'+song.title+'</span>';
+    btn.addEventListener('click',()=>selectAnswer(song.title));
+    container.appendChild(btn);
+  });
+
+  // Hide extra option elements
+  while(container.children.length>cfg.options) {
+    container.removeChild(container.lastChild);
+  }
+}
+
+// =====================================================
+//  TIMER
+// =====================================================
+function startTimer(seconds) {
+  const circle=document.getElementById('timerCircle');
+  const text=document.getElementById('timerText');
+  const circ=2*Math.PI*20;
+  circle.style.strokeDasharray=circ;
+
+  if(state.timerInterval) clearInterval(state.timerInterval);
+
+  let remaining=seconds;
+  text.textContent=remaining;
+  circle.style.strokeDashoffset=0;
+
+  state.timerInterval=setInterval(()=>{
+    remaining--;
+    text.textContent=remaining;
+    circle.style.strokeDashoffset=circ*(1-remaining/seconds);
+
+    if(remaining<=3) {
+      circle.style.stroke='#f87171';
+      text.style.color='#f87171';
+    }
+
+    if(remaining<=0) {
+      clearInterval(state.timerInterval);
+      // Auto-submit wrong answer if not answered yet
+      if(!state.answered) {
+        selectAnswer('__TIMEOUT__');
+      }
+    }
+  },1000);
+}
+
+function stopTimer() {
+  if(state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval=null; }
+}
+
+// =====================================================
+//  PLAYBACK
+// =====================================================
+function togglePlay() {
+  const audio=document.getElementById('audioPlayer');
+  if(state.isPlaying) {
+    audio.pause();
+    clearVisualizer();
+    document.getElementById('albumInfo').textContent='⏸️ 已暂停';
+    state.isPlaying=false;
+    const icon=document.getElementById('playIcon');
+    if(icon) icon.textContent='▶';
+  } else {
+    playClip();
+  }
+}
+
+function setupVisualizer() {
+  const viz=document.getElementById('visualizer');
+  if(!viz) return;
+  viz.innerHTML=''; viz.classList.add('active');
+  for(let i=0;i<16;i++) {
+    const bar=document.createElement('div'); bar.className='bar';
+    bar.style.animationDelay=(Math.random()*.8)+'s';
+    bar.style.animationDuration=(.4+Math.random()*.4)+'s';
+    viz.appendChild(bar);
+  }
+}
+
+function clearVisualizer() {
+  const viz=document.getElementById('visualizer');
+  if(viz) viz.classList.remove('active');
+}
+
+function playClip() {
+  const song=state.currentSong;
+  if(!song||!song.previewUrl) return;
+  const cfg=diffConfig();
+
+  const audio=document.getElementById('audioPlayer');
+  const info=document.getElementById('albumInfo');
+  const bufHint=document.getElementById('bufHint');
+  const errHint=document.getElementById('errHint');
+  const bigBtn=document.getElementById('btnPlayBig');
+  const playIcon=document.getElementById('playIcon');
+  const proxyHint=document.getElementById('proxyHint');
+
+  if(state.timerId) clearTimeout(state.timerId);
+  audio.pause();
+
+  // Determine which URL to use: if previous attempts failed via proxy, alternate
+  const useProxy = state._useProxy||false;
+  if(useProxy) {
+    audio.crossOrigin='anonymous';
+    audio.src=CORS_PROXIES[0]+encodeURIComponent(song.previewUrl);
+    proxyHint.style.display='block';
+  } else {
+    audio.crossOrigin='';
+    audio.src=song.previewUrl;
+    proxyHint.style.display='none';
+  }
+  audio.currentTime=0;
+  audio.volume=0.8;
+
+  bufHint.style.display='block';
+  errHint.style.display='none';
+  info.textContent='⏳ 加载音频中...';
+
+  setupVisualizer();
+  state.isPlaying=true;
+  if(playIcon) playIcon.textContent='⏸';
+
+  const playPromise=audio.play();
+  if(playPromise!==undefined) {
+    playPromise.then(()=>{
+      bufHint.style.display='none';
+      info.textContent='🎵 播放中 ('+displaySeconds(cfg.clipSec)+') · 第'+state.round+'题'+(useProxy?' ⚡(代理)':'');
+      bigBtn.classList.remove('show');
+      state.audioFailed=false;
+      state._useProxy=useProxy; // remember working mode
+    }).catch(e=>{
+      console.warn('Play failed:', e.message, '(proxy='+useProxy+')');
+      state.isPlaying=false;
+      clearVisualizer();
+      if(playIcon) playIcon.textContent='▶';
+
+      // If direct failed, try proxy; if proxy already failed, show error
+      if(!useProxy) {
+        state._useProxy=true;
+        bufHint.textContent='⏳ 直连失败，尝试代理...';
+        setTimeout(()=>playClip(),300);
+      } else {
+        bigBtn.classList.add('show');
+        bigBtn.textContent='🔄 点击重试';
+        info.textContent='👆 点击重试音频';
+        bufHint.style.display='none';
+        errHint.style.display='block';
+        errHint.textContent='⚠️ 音频加载失败，点击重试或继续答题';
+        state.audioFailed=true;
+      }
+    });
+  }
+
+  state.timerId=setTimeout(()=>{
+    audio.pause(); audio.currentTime=0;
+    clearVisualizer(); state.isPlaying=false;
+    if(playIcon) playIcon.textContent='▶';
+    info.textContent='⏸️ 片段结束，请选择答案';
+    bigBtn.classList.remove('show');
+  }, Math.round(cfg.clipSec*1000));
+
+  audio.onended=()=>{
+    clearVisualizer(); state.isPlaying=false;
+    if(playIcon) playIcon.textContent='▶';
+    info.textContent='⏸️ 片段结束，请选择答案';
+    bigBtn.classList.remove('show');
+  };
+
+  audio.onerror=()=>{
+    bufHint.style.display='none';
+    proxyHint.style.display='none';
+
+    // Try proxy fallback if direct failed and not answered yet
+    if(!useProxy && !state.answered) {
+      state._useProxy=true;
+      bufHint.textContent='⏳ 直连失败，尝试代理模式...';
+      bufHint.style.display='block';
+      errHint.style.display='none';
+      setTimeout(()=>playClip(),300);
+      return;
+    }
+
+    errHint.style.display='block';
+    errHint.textContent='⚠️ 音频加载失败';
+    bigBtn.classList.add('show');
+    bigBtn.textContent='🔄 点击重试';
+    clearVisualizer(); state.isPlaying=false;
+    if(playIcon) playIcon.textContent='▶';
+  };
+}
+
+function replayClip() {
+  if(state.answered) return;
+  document.getElementById('btnPlayBig').classList.remove('show');
+  playClip();
+}
+
+// =====================================================
+//  ANSWER
+// =====================================================
+function selectAnswer(selected) {
+  if(state.answered) return;
+  state.answered=true;
+  stopTimer();
+
+  const cfg=diffConfig();
+  const correct=state.currentSong;
+  const isAlbumMode = false;
+  const correctValue = correct.title;
+
+  let isCorrect=false;
+  if(selected==='__TIMEOUT__') {
+    isCorrect=false;
+  } else {
+    isCorrect=selected===correctValue;
+  }
+
+  // Stop audio
+  const audio=document.getElementById('audioPlayer');
+  audio.pause(); audio.currentTime=0;
+  clearVisualizer(); state.isPlaying=false;
+  if(state.timerId) { clearTimeout(state.timerId); state.timerId=null; }
+
+  // Score
+  if(isCorrect) {
+    // Bonus for streak
+    let bonus=0;
+    if(state.streak>=3) bonus=Math.min(state.streak,10);
+    state.score+=cfg.points+bonus;
+    state.streak++;
+    state.correctCount++;
+    if(state.streak>state.maxStreak) state.maxStreak=state.streak;
+  } else {
+    state.streak=0;
+  }
+
+  document.getElementById('scoreDisplay').textContent=state.score;
+  document.getElementById('streakDisplay').textContent=state.streak;
+
+  // Highlight options
+  document.querySelectorAll('.option-btn').forEach(btn=>{
+    btn.classList.add('disabled');
+    const v=btn.dataset.value;
+    if(v===correctValue) btn.classList.add('correct');
+    if(v===selected&&!isCorrect) btn.classList.add('wrong');
+    if(selected==='__TIMEOUT__'&&v===correctValue) btn.classList.add('correct');
+
+    const span=document.createElement('span');
+    span.className='check-icon';
+    if(v===correctValue) span.textContent='✅';
+    else if(v===selected&&!isCorrect) span.textContent='❌';
+    else span.textContent='';
+    if(span.textContent) btn.appendChild(span);
+  });
+
+  // Feedback
+  const fb=document.getElementById('feedback');
+  if(selected==='__TIMEOUT__') {
+    fb.textContent='⏰ 时间到！答案是「'+correctValue+'」 — '+correct.album;
+    fb.className='feedback show wrong';
+  } else if(isCorrect) {
+    const msgs=['🎯 正确！🫶','✨ 完美！🌟','🔥 不愧是 Swiftie！','💫 太棒了！','🎵 厉害！','👏 没错！'];
+    let msg=msgs[Math.floor(Math.random()*msgs.length)];
+    if(state.streak>=3) msg+=' 🔥 '+state.streak+'连对';
+    if(state.streak>=5&&state.streak%5===0) msg='🎊 '+state.streak+'连对！你太强了！！';
+    fb.textContent=msg;
+    fb.className='feedback show correct';
+  } else {
+    fb.textContent='❌ 答案是「'+correctValue+'」 — '+correct.album;
+    fb.className='feedback show wrong';
+  }
+
+  const isLast=state.round>=cfg.rounds;
+  document.getElementById('nextRow').innerHTML=
+    '<button class="btn btn-sm btn-primary" onclick="nextRound()">'
+    +(isLast?'🏁 查看结果':'➡️ 下一题')+'</button>';
+
+  document.getElementById('btnPlayBig').classList.remove('show');
+}
+
+// =====================================================
+//  END
+// =====================================================
+function endGame() {
+  showScreen('screen-end');
+  stopTimer();
+  const cfg=diffConfig();
+  const pct=Math.round((state.correctCount/cfg.rounds)*100);
+
+  const maxScore=cfg.rounds*cfg.points;
+  document.getElementById('finalScore').textContent=state.score;
+  document.getElementById('statCorrect').textContent=state.correctCount+'/'+cfg.rounds;
+  document.getElementById('statStreak').textContent=state.maxStreak;
+  document.getElementById('statAccuracy').textContent=pct+'%';
+  document.getElementById('endDiffInfo').textContent=cfg.icon+' '+cfg.label+'模式 · 每题'+cfg.points+'分（连对加分） · 满分'+maxScore;
+
+  let rank,msg;
+  if(pct>=100) { rank='👑 至尊 Swiftie'; msg='满分！所有歌倒背如流！🫶'; }
+  else if(pct>=90) { rank='🌟 钻石 Swiftie'; msg='太强了！你是真正的 Swiftie！'; }
+  else if(pct>=75) { rank='💎 黄金 Swiftie'; msg='很棒！你的播放列表全是 Taylor！'; }
+  else if(pct>=60) { rank='🥈 白银 Swiftie'; msg='不错不错，继续加油！'; }
+  else if(pct>=40) { rank='🥉 青铜 Swiftie'; msg='还需要多听几遍哦！'; }
+  else if(pct>=20) { rank='🌱 萌新 Swiftie'; msg='刚入坑吧？从 Fearless 开始补！'; }
+  else { rank='🎧 路人'; msg='你确定听过 Taylor Swift？😅'; }
+
+  document.getElementById('rankDisplay').textContent=rank;
+  document.getElementById('rankMsg').textContent=msg;
+  saveGame();
+}
+
+// =====================================================
+//  LEADERBOARD + STATS
+// =====================================================
+function saveGame() {
+  try {
+    const cfg=diffConfig();
+    const game={score:state.score,correct:state.correctCount,rounds:cfg.rounds,diff:state.difficulty,date:new Date().toLocaleDateString('zh-CN')};
+
+    // Leaderboard
+    const lb=JSON.parse(localStorage.getItem('tswift_lb')||'[]');
+    lb.push(game);
+    lb.sort((a,b)=>b.score-a.score);
+    localStorage.setItem('tswift_lb',JSON.stringify(lb.slice(0,50)));
+
+    // Aggregated stats
+    const st=JSON.parse(localStorage.getItem('tswift_stats')||'{"games":0,"totalCorrect":0,"totalRounds":0,"totalScore":0}');
+    st.games++;
+    st.totalCorrect+=state.correctCount;
+    st.totalRounds+=cfg.rounds;
+    st.totalScore+=state.score;
+    localStorage.setItem('tswift_stats',JSON.stringify(st));
+  } catch(e){}
+}
+
+function saveLyricGame() {
+  try {
+    const diffLabel = lyricDifficulty === 'easy' ? 'lyric-easy' : 'lyric-hard';
+    const game = {score:lyricState.score, correct:lyricState.correctCount, rounds:LYRIC_TOTAL, diff:diffLabel, date:new Date().toLocaleDateString('zh-CN')};
+
+    // Leaderboard
+    const lb=JSON.parse(localStorage.getItem('tswift_lb')||'[]');
+    lb.push(game);
+    lb.sort((a,b)=>b.score-a.score);
+    localStorage.setItem('tswift_lb',JSON.stringify(lb.slice(0,50)));
+
+    // Aggregated stats
+    const st=JSON.parse(localStorage.getItem('tswift_stats')||'{"games":0,"totalCorrect":0,"totalRounds":0,"totalScore":0}');
+    st.games++;
+    st.totalCorrect+=lyricState.correctCount;
+    st.totalRounds+=LYRIC_TOTAL;
+    st.totalScore+=lyricState.score;
+    localStorage.setItem('tswift_stats',JSON.stringify(st));
+  } catch(e){}
+}
+
+function showLeaderboard() {
+  showScreen('screen-leaderboard');
+  const c=document.getElementById('leaderboardContent');
+  try {
+    const lb=JSON.parse(localStorage.getItem('tswift_lb')||'[]');
+    if(!lb.length) { c.innerHTML='<div style="color:var(--text-dim);font-size:14px;padding:20px 0;">暂无记录</div>'; return; }
+    c.innerHTML=lb.map((r,i)=>{
+      const m=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.';
+      const d=(DIFFICULTIES[r.diff]||(r.diff==='lyric-easy'?{icon:'📝🌱'}:r.diff==='lyric-hard'?{icon:'📝💀'}:{icon:'🎵'})).icon;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--card-border);font-size:13px;">'
+        +'<span>'+m+' <strong>'+r.score+'分</strong> '+d+'</span>'
+        +'<span style="color:var(--text-dim);font-size:11px;">'+r.correct+'/'+r.rounds+' · '+r.date+'</span></div>';
+    }).join('');
+  } catch(e){ c.innerHTML='<div style="color:var(--text-dim);">加载失败</div>'; }
+}
+
+function showStats() {
+  showScreen('screen-stats');
+  const c=document.getElementById('statsContent');
+  try {
+    const st=JSON.parse(localStorage.getItem('tswift_stats')||'null');
+    if(!st||!st.games) { c.innerHTML='<div style="color:var(--text-dim);font-size:14px;padding:20px 0;">暂无数据，快去玩几局吧！</div>'; return; }
+    const pct=st.totalRounds?Math.round((st.totalCorrect/st.totalRounds)*100):0;
+    c.innerHTML=
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">'
+      +'<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:14px 8px;"><div style="font-size:28px;font-weight:800;color:var(--gold);">'+st.games+'</div><div style="font-size:12px;color:var(--text-dim);">总场次</div></div>'
+      +'<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:14px 8px;"><div style="font-size:28px;font-weight:800;color:var(--accent-pink);">'+st.totalScore+'</div><div style="font-size:12px;color:var(--text-dim);">累计得分</div></div>'
+      +'<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:14px 8px;"><div style="font-size:28px;font-weight:800;color:var(--accent-purple);">'+pct+'%</div><div style="font-size:12px;color:var(--text-dim);">总正确率</div></div>'
+      +'</div>'
+      +'<div style="font-size:13px;color:var(--text-dim);">共答 <strong>'+st.totalCorrect+'</strong> 题 / <strong>'+st.totalRounds+'</strong> 题</div>';
+  } catch(e){ c.innerHTML='<div style="color:var(--text-dim);">加载失败</div>'; }
+}
+
+// =====================================================
+//  UTILS
+// =====================================================
+function pickRandom(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+function shuffle(arr) {
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+// =====================================================
+//  KEYBOARD
+// =====================================================
+document.addEventListener('keydown',e=>{
+  const max=diffConfig().options;
+  if(e.key>='1'&&e.key<=String(max)) {
+    const btns=document.querySelectorAll('.option-btn');
+    if(btns[parseInt(e.key)-1]) btns[parseInt(e.key)-1].click();
+  }
+  if(e.key==='Enter'||e.key===' ') {
+    const next=document.querySelector('.next-row .btn-primary');
+    if(next) next.click();
+  }
+  if(e.key==='r'||e.key==='R') replayClip();
+});
+</script>
+
+</body>
+</html>

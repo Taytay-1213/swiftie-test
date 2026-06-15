@@ -1,0 +1,8 @@
+*.bak
+*.log
+.DS_Store
+Thumbs.db
+*-backup.html
+*-legacy.html
+*-prelyric.html
+.claude/
