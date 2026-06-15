@@ -18,10 +18,10 @@ if %errorlevel%==0 (
     exit /b
 )
 
-:: Commit
-set /p MSG="输入更新说明 (直接回车默认为 update): "
-if "%MSG%"=="" set MSG=update
-git commit -m "%MSG%"
+:: Auto commit with timestamp
+for /f "tokens=1-3 delims=/ " %%a in ('date /t') do set d=%%a%%b%%c
+for /f "tokens=1-2 delims=: " %%a in ('time /t') do set t=%%a%%b
+git commit -m "update %d%_%t%"
 
 :: Push
 echo.
