@@ -276,7 +276,7 @@
   .lyric-box {
     background: rgba(0,0,0,0.25); border-radius: 14px; padding: 24px 20px;
     margin-bottom: 16px; text-align: center;
-    border-left: 3px solid var(--accent-pink); min-height: 80px;
+    border-left: 3px solid var(--accent-pink); min-height: 80px; max-height: 200px; overflow-y: auto;
     display: flex; align-items: center; justify-content: center;
   }
   .lyric-text {
@@ -416,7 +416,7 @@
         <div><div class="d-name">专家 · Expert</div><div class="d-desc">播放 3 秒 · 6 选项 · 限时 10 秒 · 有提示？？</div></div>
       </button>
       <button class="diff-btn" data-diff="nightmare" onclick="selectDifficulty('nightmare',this)">
-        <div class="d-icon">💀</div>
+        <div class="d-icon">☠️</div>
         <div><div class="d-name">噩梦 · Nightmare</div><div class="d-desc">播放 1 秒 · 6 选项 · 限时 6.5 秒 · 每题 30 分 · 有提示？？</div></div>
       </button>
     </div>
@@ -437,6 +437,7 @@
       <div class="spinner"></div>
       <div class="loading-text" id="loadingText">正在搜索 Taylor Swift 歌曲库...</div>
       <div class="loading-progress"><div class="loading-progress-bar" id="loadingBar"></div></div>
+      <button class="btn btn-sm btn-secondary" onclick="showStart()" style="margin-top:16px;">🏠 返回首页</button>
     </div>
   </div>
 
@@ -1095,13 +1096,6 @@ function isLyricContainsTitle(item) {
 }
 
 // ====================== LYRIC GAME FUNCTIONS ======================
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
 
 function lyricPickQuestions(selectedEras, lyricDiff) {
   let pool = LYRICS_POOL;
@@ -1222,6 +1216,7 @@ function lyricNextQuestion() {
 
 function skipLyricQuestion() {
   if (lyricState.answered) return;
+  if (!confirm('确定要跳过此题吗？\n\n跳过将扣 1 分并重置连对。')) return;
   lyricState.score = Math.max(0, lyricState.score - 1);
   lyricState.currentStreak = 0;
   lyricState.skippedCount++;
@@ -1658,14 +1653,12 @@ function renderOptions() {
   const cfg=diffConfig();
   container.innerHTML='';
 
-  const isAlbumMode = false;
 
   state.options.forEach((song,i)=>{
     if(i>=cfg.options) return;
     const btn=document.createElement('button');
     btn.className='option-btn';
     btn.dataset.value=song.title;
-    btn.innerHTML='<span class="letter">'+letters[i]+'</span><span>'+song.title+'</span>';
     btn.addEventListener('click',()=>selectAnswer(song.title));
     container.appendChild(btn);
   });
@@ -1872,7 +1865,6 @@ function selectAnswer(selected) {
 
   const cfg=diffConfig();
   const correct=state.currentSong;
-  const isAlbumMode = false;
   const correctValue = correct.title;
 
   let isCorrect=false;
@@ -2028,9 +2020,9 @@ function showLeaderboard() {
     if(!lb.length) { c.innerHTML='<div style="color:var(--text-dim);font-size:14px;padding:20px 0;">暂无记录</div>'; return; }
     c.innerHTML=lb.map((r,i)=>{
       const m=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.';
-      const d=(DIFFICULTIES[r.diff]||(r.diff==='lyric-easy'?{icon:'📝🌱'}:r.diff==='lyric-hard'?{icon:'📝💀'}:{icon:'🎵'})).icon;
+      let modeLabel = ''; if (r.diff === 'lyric-easy') modeLabel = '📝🌱 歌词·简单'; else if (r.diff === 'lyric-hard') modeLabel = '📝💀 歌词·困难'; else { const cfg = DIFFICULTIES[r.diff]; modeLabel = '🎵 ' + (cfg ? cfg.icon + ' ' + cfg.label : r.diff || '未知'); }
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--card-border);font-size:13px;">'
-        +'<span>'+m+' <strong>'+r.score+'分</strong> '+d+'</span>'
+        +'<span>'+m+' <strong>'+r.score+'分</strong> <span style="font-size:11px;">'+modeLabel+'</span></span>'
         +'<span style="color:var(--text-dim);font-size:11px;">'+r.correct+'/'+r.rounds+' · '+r.date+'</span></div>';
     }).join('');
   } catch(e){ c.innerHTML='<div style="color:var(--text-dim);">加载失败</div>'; }
