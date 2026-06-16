@@ -345,7 +345,7 @@
     <div class="desc">
       听歌曲片段，从选项中猜出正确的歌名。<br>
       Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！<br>
-      <span style="font-size:12px;color:var(--text-dim);">直连 iTunes · 海外可用</span>
+      <span style="font-size:13px;">⚡🌍</span>
     </div>
 
           <div style="font-size:13px;color:var(--text-dim);margin-bottom:8px;text-align:center;font-weight:600;">
@@ -428,6 +428,9 @@
     <div style="text-align:center;">
       <button class="btn btn-xs btn-secondary" onclick="showLeaderboard()">🏆 排行榜</button>
       <button class="btn btn-xs btn-secondary" onclick="showStats()">📊 我的数据</button>
+    </div>
+    <div style="text-align:center;margin-top:10px;font-size:11px;color:var(--text-dim);">
+      若音乐播放不了，点这里进入 👉 <a href="../guess-tswift.html" style="color:var(--text-dim);opacity:0.6;transition:opacity .2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.6'">🏠 国内版</a>
     </div>
   </div>
 
@@ -1322,7 +1325,7 @@ function setMode(mode) {
   const desc = document.querySelector('#screen-start .desc');
   const eraSelector = document.getElementById('lyricEraSelector');
   if (mode === 'listen') {
-    desc.innerHTML = '听歌曲片段，从选项中猜出正确的歌名。<br>Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！<br><span style="font-size:12px;color:var(--text-dim);">直连 iTunes · 海外可用</span>';
+    desc.innerHTML = '听歌曲片段，从选项中猜出正确的歌名。<br>Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！<br><span style="font-size:13px;">⚡🌍</span>';
     document.getElementById('listenDiffSection').style.display = 'block';
     if (eraSelector) eraSelector.style.display = 'none';
   } else {
