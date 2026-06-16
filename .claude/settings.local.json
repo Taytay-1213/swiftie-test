@@ -40,7 +40,12 @@
       "Bash(git pull *)",
       "Bash(git fetch *)",
       "Bash(git merge *)",
-      "Bash(gh api *)"
+      "Bash(gh api *)",
+      "Bash(netstat -ano)",
+      "Bash(awk '{print $2}')",
+      "Read(//c/Users/SZ/AppData/Roaming/**)",
+      "Read(//c/Users/SZ/AppData/Local/**)",
+      "Read(//c/Users/SZ/.config/**)"
     ]
   }
 }
