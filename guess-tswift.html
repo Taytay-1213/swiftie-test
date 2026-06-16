@@ -1659,6 +1659,7 @@ function renderOptions() {
     const btn=document.createElement('button');
     btn.className='option-btn';
     btn.dataset.value=song.title;
+    btn.innerHTML='<span class="letter">'+letters[i]+'</span><span>'+song.title+'</span>';
     btn.addEventListener('click',()=>selectAnswer(song.title));
     container.appendChild(btn);
   });
