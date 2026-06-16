@@ -1371,6 +1371,7 @@ let state = {
   timerInterval: null,
   isPlaying: false,
   audioFailed: false,
+  _blobUrl: null,
   isFirstRound: true,
   usedTitles: new Set(),
 };
@@ -1462,6 +1463,8 @@ function goHome() {
   // 清理音频
   const audio = document.getElementById('audioPlayer');
   audio.pause(); audio.currentTime = 0; audio.src = '';
+  // 清理 blob URL
+  if (state._blobUrl) { URL.revokeObjectURL(state._blobUrl); state._blobUrl = null; }
   // 清理定时器
   stopTimer();
   if (state.timerId) { clearTimeout(state.timerId); state.timerId = null; }
@@ -1820,7 +1823,7 @@ function clearVisualizer() {
   if(viz) viz.classList.remove('active');
 }
 
-function playClip() {
+function playClip(directFallback) {
   const song=state.currentSong;
   if(!song||!song.previewUrl) return;
   const cfg=diffConfig();
@@ -1835,64 +1838,130 @@ function playClip() {
   if(state.timerId) clearTimeout(state.timerId);
   audio.pause();
 
-  audio.crossOrigin='';
-  audio.src=song.previewUrl;
-  audio.currentTime=0;
-  audio.volume=0.8;
+  // Cleanup previous blob URL if any
+  if (state._blobUrl) { URL.revokeObjectURL(state._blobUrl); state._blobUrl = null; }
 
-  bufHint.style.display='block';
-  errHint.style.display='none';
-  info.textContent='⏳ 加载音频中...';
+  function setupAndPlay(src, label) {
+    audio.src = src;
+    audio.currentTime = 0;
+    audio.volume = 0.8;
+    bufHint.style.display = 'block';
+    bufHint.textContent = '⏳ ' + (label || '加载音频中...');
+    errHint.style.display = 'none';
+    info.textContent = '⏳ ' + (label || '加载音频中...');
 
-  setupVisualizer();
-  state.isPlaying=true;
-  if(playIcon) playIcon.textContent='⏸';
+    setupVisualizer();
+    state.isPlaying = true;
+    if (playIcon) playIcon.textContent = '⏸';
 
-  const playPromise=audio.play();
-  if(playPromise!==undefined) {
-    playPromise.then(()=>{
-      bufHint.style.display='none';
-      info.textContent='🎵 播放中 ('+displaySeconds(cfg.clipSec)+') · 第'+state.round+'题';
-      bigBtn.classList.remove('show');
-      state.audioFailed=false;
-    }).catch(e=>{
-      console.warn('Play failed:', e.message);
-      state.isPlaying=false;
-      clearVisualizer();
-      if(playIcon) playIcon.textContent='▶';
-      bigBtn.classList.add('show');
-      bigBtn.textContent='▶ 点击播放';
-      info.textContent='👆 点击播放音频';
-      bufHint.style.display='none';
-      errHint.style.display='block';
-      errHint.textContent='⚠️ 音频加载失败，点击重试或继续答题';
-      state.audioFailed=true;
-    });
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        bufHint.style.display = 'none';
+        info.textContent = '🎵 播放中 (' + displaySeconds(cfg.clipSec) + ') · 第' + state.round + '题';
+        bigBtn.classList.remove('show');
+        state.audioFailed = false;
+      }).catch(e => {
+        console.warn('Play failed:', e.message);
+        state.isPlaying = false;
+        clearVisualizer();
+        if (playIcon) playIcon.textContent = '▶';
+        bigBtn.classList.add('show');
+        bigBtn.textContent = '▶ 点击播放';
+        info.textContent = '👆 点击播放音频';
+        bufHint.style.display = 'none';
+        errHint.style.display = 'block';
+        errHint.textContent = '⚠️ 音频加载失败，点击重试或继续答题';
+        state.audioFailed = true;
+      });
+    }
   }
 
-  state.timerId=setTimeout(()=>{
-    audio.pause(); audio.currentTime=0;
-    clearVisualizer(); state.isPlaying=false;
-    if(playIcon) playIcon.textContent='▶';
-    info.textContent='⏸️ 片段结束，请选择答案';
-    bigBtn.classList.remove('show');
-  }, Math.round(cfg.clipSec*1000));
+  // --- Strategy: direct first, then proxy blob ---
+  if (!directFallback) {
+    // Try direct iTunes URL first
+    audio.crossOrigin = '';
+    setupAndPlay(song.previewUrl, '加载中...');
 
-  audio.onended=()=>{
-    clearVisualizer(); state.isPlaying=false;
-    if(playIcon) playIcon.textContent='▶';
-    info.textContent='⏸️ 片段结束，请选择答案';
-    bigBtn.classList.remove('show');
-  };
+    // If direct fails, fall back to proxy blob
+    const onDirectError = async () => {
+      if (state.answered || state.audioFailed === false) return; // already succeeded
+      bufHint.textContent = '⏳ 直连失败，尝试代理加载...';
+      bufHint.style.display = 'block';
+      errHint.style.display = 'none';
+      // Try each proxy to download as blob
+      for (const proxy of CORS_PROXIES) {
+        try {
+          const proxyUrl = proxy + encodeURIComponent(song.previewUrl);
+          const resp = await fetch(proxyUrl);
+          if (!resp.ok) continue;
+          const blob = await resp.blob();
+          if (blob.size < 100) continue; // too small, probably error page
+          state._blobUrl = URL.createObjectURL(blob);
+          audio.crossOrigin = '';
+          audio.onerror = onBlobError;
+          setupAndPlay(state._blobUrl, '代理加载中...');
+          return;
+        } catch (e) { continue; }
+      }
+      // All proxies failed
+      onBlobError();
+    };
+    const onBlobError = () => {
+      bufHint.style.display = 'none';
+      errHint.style.display = 'block';
+      errHint.textContent = '⚠️ 音频加载失败，点击重试或继续答题';
+      bigBtn.classList.add('show');
+      bigBtn.textContent = '🔄 点击重试';
+      clearVisualizer(); state.isPlaying = false;
+      if (playIcon) playIcon.textContent = '▶';
+      state.audioFailed = true;
+    };
+    audio.onerror = () => { onDirectError(); };
+  } else {
+    // Already in fallback mode, try proxy blob directly
+    bufHint.textContent = '⏳ 正在通过代理加载...';
+    bufHint.style.display = 'block';
+    (async () => {
+      for (const proxy of CORS_PROXIES) {
+        try {
+          const proxyUrl = proxy + encodeURIComponent(song.previewUrl);
+          const resp = await fetch(proxyUrl);
+          if (!resp.ok) continue;
+          const blob = await resp.blob();
+          if (blob.size < 100) continue;
+          state._blobUrl = URL.createObjectURL(blob);
+          audio.crossOrigin = '';
+          setupAndPlay(state._blobUrl, '代理加载中...');
+          return;
+        } catch (e) { continue; }
+      }
+      bufHint.style.display = 'none';
+      errHint.style.display = 'block';
+      errHint.textContent = '⚠️ 代理加载也失败了，请检查网络';
+      bigBtn.classList.add('show');
+      bigBtn.textContent = '🔄 点击重试';
+      info.textContent = '👆 点击重试或继续答题';
+      clearVisualizer(); state.isPlaying = false;
+      if (playIcon) playIcon.textContent = '▶';
+      state.audioFailed = true;
+    })();
+  }
 
-  audio.onerror=()=>{
-    bufHint.style.display='none';
-    errHint.style.display='block';
-    errHint.textContent='⚠️ 音频加载失败，点击重试';
-    bigBtn.classList.add('show');
-    bigBtn.textContent='🔄 点击重试';
-    clearVisualizer(); state.isPlaying=false;
-    if(playIcon) playIcon.textContent='▶';
+  // Clip duration limit
+  state.timerId = setTimeout(() => {
+    audio.pause(); audio.currentTime = 0;
+    clearVisualizer(); state.isPlaying = false;
+    if (playIcon) playIcon.textContent = '▶';
+    info.textContent = '⏸️ 片段结束，请选择答案';
+    bigBtn.classList.remove('show');
+  }, Math.round(cfg.clipSec * 1000));
+
+  audio.onended = () => {
+    clearVisualizer(); state.isPlaying = false;
+    if (playIcon) playIcon.textContent = '▶';
+    info.textContent = '⏸️ 片段结束，请选择答案';
+    bigBtn.classList.remove('show');
   };
 }
 
