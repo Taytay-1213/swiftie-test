@@ -345,7 +345,7 @@
     <div class="desc">
       听歌曲片段，从选项中猜出正确的歌名。<br>
       Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！<br>
-      <span style="font-size:14px;color:#7ecfff;">🌐 ⚡</span>
+      <span style="font-size:12px;color:var(--text-dim);">直连 iTunes · 海外可用</span>
     </div>
 
           <div style="font-size:13px;color:var(--text-dim);margin-bottom:8px;text-align:center;font-weight:600;">
@@ -485,7 +485,6 @@
         <span id="albumInfo">🔊 点击封面播放片段</span>
         <div class="buf-hint" id="bufHint">⏳ 音频加载中...</div>
         <div class="err-hint" id="errHint">⚠️ 音频加载失败，可重试</div>
-        <div class="hint" id="proxyHint" style="display:none;font-size:11px;margin-top:4px;color:#7ecfff;">⚡ 已切换代理模式</div>
         <div class="hint" id="hintText">提示: 1-6 选题 · R 重听</div>
       </div>
       <button class="btn-play-big" id="btnPlayBig" onclick="togglePlay()">▶ 点击播放</button>
@@ -1323,7 +1322,7 @@ function setMode(mode) {
   const desc = document.querySelector('#screen-start .desc');
   const eraSelector = document.getElementById('lyricEraSelector');
   if (mode === 'listen') {
-    desc.innerHTML = '听歌曲片段，从选项中猜出正确的歌名。<br>Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！<br><span style="font-size:14px;color:#7ecfff;">🌐 ⚡</span>';
+    desc.innerHTML = '听歌曲片段，从选项中猜出正确的歌名。<br>Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！<br><span style="font-size:12px;color:var(--text-dim);">直连 iTunes · 海外可用</span>';
     document.getElementById('listenDiffSection').style.display = 'block';
     if (eraSelector) eraSelector.style.display = 'none';
   } else {
@@ -1418,64 +1417,30 @@ function goHome() {
 }
 
 // =====================================================
-//  FETCH – get previews from iTunes API
+//  FETCH – get previews from iTunes API (direct)
 // =====================================================
-const CORS_PROXIES = [
-  'https://api.allorigins.win/raw?url=',
-  'https://corsproxy.io/?',
-];
-
-async function fetchOneUrl(url, timeoutMs=10000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const resp = await fetch(url, { signal: controller.signal });
-    clearTimeout(timer);
-    if (!resp.ok) throw new Error('HTTP '+resp.status);
-    return await resp.json();
-  } catch(e) {
-    clearTimeout(timer);
-    throw e;
-  }
-}
-
 async function fetchTaylorSongs() {
-  let data;
-  // Try direct first
-  try {
-    data = await fetchOneUrl('https://itunes.apple.com/search?term=taylor+swift&entity=song&limit=200');
-  } catch(e) {
-    console.warn('iTunes direct failed:', e.message);
-    // Try with proxies
-    for(const proxy of CORS_PROXIES) {
-      try {
-        const url=proxy+encodeURIComponent('https://itunes.apple.com/search?term=taylor+swift&entity=song&limit=200');
-        data = await fetchOneUrl(url);
-        if(data&&data.results&&data.results.length) break;
-      } catch(e2) {
-        console.warn('Proxy failed:', e2.message);
-        continue;
-      }
-    }
-    if(!data||!data.results) throw new Error('iTunes API unreachable (try turning on your VPN)');
-  }
-  if(!data.results||!data.results.length) throw new Error('No results from iTunes');
+  const url = 'https://itunes.apple.com/search?term=taylor+swift&entity=song&limit=200';
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error('iTunes API failed: ' + resp.status);
+  const data = await resp.json();
+  if (!data.results || !data.results.length) throw new Error('No results from iTunes');
 
-  const previewMap=new Map();
-  for(const r of data.results) {
-    if(!r.previewUrl) continue;
-    const key=r.trackName.toLowerCase().replace(/[^a-z0-9]/g,'');
-    if(!previewMap.has(key)) {
-      previewMap.set(key,{previewUrl:r.previewUrl, artwork:r.artworkUrl100?.replace('100x100','300x300')});
+  const previewMap = new Map();
+  for (const r of data.results) {
+    if (!r.previewUrl) continue;
+    const key = r.trackName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!previewMap.has(key)) {
+      previewMap.set(key, { previewUrl: r.previewUrl, artwork: r.artworkUrl100?.replace('100x100', '300x300') });
     }
   }
 
-  const enriched=SONG_DATABASE.map(song=>{
-    const key=song.title.toLowerCase().replace(/[^a-z0-9]/g,'');
-    const found=previewMap.get(key);
-    return {...song, previewUrl:found?.previewUrl||null, artwork:found?.artwork||null};
+  const enriched = SONG_DATABASE.map(song => {
+    const key = song.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const found = previewMap.get(key);
+    return { ...song, previewUrl: found?.previewUrl || null, artwork: found?.artwork || null };
   });
-  return enriched.filter(s=>s.previewUrl);
+  return enriched.filter(s => s.previewUrl);
 }
 
 // =====================================================
@@ -1569,7 +1534,6 @@ function nextRound() {
   state.answered=false;
   state.audioFailed=false;
   state.isPlaying=false;
-  if(state._useProxy===undefined) state._useProxy=false;
 
   if(state.timerId) clearTimeout(state.timerId);
 
@@ -1774,22 +1738,12 @@ function playClip() {
   const errHint=document.getElementById('errHint');
   const bigBtn=document.getElementById('btnPlayBig');
   const playIcon=document.getElementById('playIcon');
-  const proxyHint=document.getElementById('proxyHint');
 
   if(state.timerId) clearTimeout(state.timerId);
   audio.pause();
 
-  // Determine which URL to use: if previous attempts failed via proxy, alternate
-  const useProxy = state._useProxy||false;
-  if(useProxy) {
-    audio.crossOrigin='anonymous';
-    audio.src=CORS_PROXIES[0]+encodeURIComponent(song.previewUrl);
-    proxyHint.style.display='block';
-  } else {
-    audio.crossOrigin='';
-    audio.src=song.previewUrl;
-    proxyHint.style.display='none';
-  }
+  audio.crossOrigin='';
+  audio.src=song.previewUrl;
   audio.currentTime=0;
   audio.volume=0.8;
 
@@ -1805,30 +1759,21 @@ function playClip() {
   if(playPromise!==undefined) {
     playPromise.then(()=>{
       bufHint.style.display='none';
-      info.textContent='🎵 播放中 ('+displaySeconds(cfg.clipSec)+') · 第'+state.round+'题'+(useProxy?' ⚡(代理)':'');
+      info.textContent='🎵 播放中 ('+displaySeconds(cfg.clipSec)+') · 第'+state.round+'题';
       bigBtn.classList.remove('show');
       state.audioFailed=false;
-      state._useProxy=useProxy; // remember working mode
     }).catch(e=>{
-      console.warn('Play failed:', e.message, '(proxy='+useProxy+')');
+      console.warn('Play failed:', e.message);
       state.isPlaying=false;
       clearVisualizer();
       if(playIcon) playIcon.textContent='▶';
-
-      // If direct failed, try proxy; if proxy already failed, show error
-      if(!useProxy) {
-        state._useProxy=true;
-        bufHint.textContent='⏳ 直连失败，尝试代理...';
-        setTimeout(()=>playClip(),300);
-      } else {
-        bigBtn.classList.add('show');
-        bigBtn.textContent='🔄 点击重试';
-        info.textContent='👆 点击重试音频';
-        bufHint.style.display='none';
-        errHint.style.display='block';
-        errHint.textContent='⚠️ 音频加载失败，点击重试或继续答题';
-        state.audioFailed=true;
-      }
+      bigBtn.classList.add('show');
+      bigBtn.textContent='▶ 点击播放';
+      info.textContent='👆 点击播放音频';
+      bufHint.style.display='none';
+      errHint.style.display='block';
+      errHint.textContent='⚠️ 浏览器阻止了自动播放，请点击播放';
+      state.audioFailed=true;
     });
   }
 
@@ -1849,18 +1794,6 @@ function playClip() {
 
   audio.onerror=()=>{
     bufHint.style.display='none';
-    proxyHint.style.display='none';
-
-    // Try proxy fallback if direct failed and not answered yet
-    if(!useProxy && !state.answered) {
-      state._useProxy=true;
-      bufHint.textContent='⏳ 直连失败，尝试代理模式...';
-      bufHint.style.display='block';
-      errHint.style.display='none';
-      setTimeout(()=>playClip(),300);
-      return;
-    }
-
     errHint.style.display='block';
     errHint.textContent='⚠️ 音频加载失败';
     bigBtn.classList.add('show');
