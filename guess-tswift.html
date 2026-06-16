@@ -49,6 +49,20 @@
   }
   @keyframes twinkle { 0%{opacity:.2;transform:scale(.8)} 100%{opacity:1;transform:scale(1.2)} }
 
+  /* --- TAYLOR SWIFT ALBUM ART BACKGROUND --- */
+  .ts-bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .ts-bg .bg-art {
+    position: absolute; border-radius: 12px;
+    background-size: cover; background-position: center;
+    opacity: 0.07; filter: blur(3px) brightness(0.6);
+    animation: bgFloat var(--bf-dur, 20s) ease-in-out infinite alternate;
+    transition: opacity 0.6s;
+  }
+  @keyframes bgFloat {
+    0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    100% { transform: translate(var(--bf-x, 10px), var(--bf-y, -10px)) rotate(var(--bf-r, 2deg)) scale(1.05); }
+  }
+
   .container { position:relative; z-index:1; width:100%; max-width:540px; padding:16px; }
   .card {
     background:var(--card-bg); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
@@ -333,6 +347,7 @@
 <body>
 
 <div class="stars" id="stars"></div>
+<div class="ts-bg" id="tsBg"></div>
 
 <div class="container">
   <!-- Swiftie Test · 玉簟秋 © 2026 · 原创不易，请勿盗用 -->
@@ -344,8 +359,7 @@
     <div class="subtitle">Taylor Swift 猜歌挑战</div>
     <div class="desc">
       听歌曲片段，从选项中猜出正确的歌名。<br>
-      Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！<br>
-      <span style="font-size:14px;color:#7ecfff;">🌐 ⚡</span>
+      Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！
     </div>
 
           <div style="font-size:13px;color:var(--text-dim);margin-bottom:8px;text-align:center;font-weight:600;">
@@ -485,7 +499,6 @@
         <span id="albumInfo">🔊 点击封面播放片段</span>
         <div class="buf-hint" id="bufHint">⏳ 音频加载中...</div>
         <div class="err-hint" id="errHint">⚠️ 音频加载失败，可重试</div>
-        <div class="hint" id="proxyHint" style="display:none;font-size:11px;margin-top:4px;color:#7ecfff;">⚡ 已切换代理模式</div>
         <div class="hint" id="hintText">提示: 1-6 选题 · R 重听</div>
       </div>
       <button class="btn-play-big" id="btnPlayBig" onclick="togglePlay()">▶ 点击播放</button>
@@ -1323,7 +1336,7 @@ function setMode(mode) {
   const desc = document.querySelector('#screen-start .desc');
   const eraSelector = document.getElementById('lyricEraSelector');
   if (mode === 'listen') {
-    desc.innerHTML = '听歌曲片段，从选项中猜出正确的歌名。<br>Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！<br><span style="font-size:14px;color:#7ecfff;">🌐 ⚡</span>';
+    desc.innerHTML = '听歌曲片段，从选项中猜出正确的歌名。<br>Taylor Swift 全曲库 🎵 涵盖所有专辑与 Era！';
     document.getElementById('listenDiffSection').style.display = 'block';
     if (eraSelector) eraSelector.style.display = 'none';
   } else {
@@ -1382,6 +1395,48 @@ initStars();
 // Swiftie Test by 玉簟秋 · 原创作品，请勿盗用
 console.log('🎵 Swiftie Test · 玉簟秋 © 2026 · 原创不易');
 
+// =====================================================
+//  BACKGROUND — Taylor Swift album art collage
+// =====================================================
+const DEFAULT_ARTWORKS = [
+  'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ba/f1/8b/baf18b39-9d2a-9b96-0f7b-1a5c7e2b3e8d/00602537869774.rgb.jpg/300x300bb.jpg',
+  'https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/a0/9d/8c/a09d8c28-9e03-7e33-9e7b-f1c2f6a9b3e1/00602537889822.rgb.jpg/300x300bb.jpg',
+  'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ed/2f/3c/ed2f3c5a-3b0e-4b1a-8e2d-9f1c5a7b3e8d/00602537869798.rgb.jpg/300x300bb.jpg',
+];
+
+function createBgArt(artworks) {
+  const container = document.getElementById('tsBg');
+  if (!container) return;
+  container.innerHTML = '';
+  const urls = (artworks && artworks.length >= 6) ? artworks : DEFAULT_ARTWORKS;
+  // Repeat to have ~15-20 floating elements
+  const pool = [];
+  while (pool.length < 18) { pool.push(...urls); }
+  const shuffled = pool.sort(() => Math.random() - 0.5);
+  const cols = 5, rows = 4;
+  const cellW = 100 / cols, cellH = 100 / rows;
+  for (let i = 0; i < Math.min(shuffled.length, 20); i++) {
+    const el = document.createElement('div');
+    el.className = 'bg-art';
+    el.style.backgroundImage = 'url(' + shuffled[i] + ')';
+    // Grid-based positioning with jitter
+    const col = i % cols, row = Math.floor(i / cols) % rows;
+    el.style.left = (col * cellW + (Math.random() - 0.5) * cellW * 0.6) + '%';
+    el.style.top = (row * cellH + (Math.random() - 0.5) * cellH * 0.6) + '%';
+    el.style.width = (80 + Math.random() * 100) + 'px';
+    el.style.height = (80 + Math.random() * 100) + 'px';
+    el.style.setProperty('--bf-dur', (15 + Math.random() * 20) + 's');
+    el.style.setProperty('--bf-x', ((Math.random() - 0.5) * 30) + 'px');
+    el.style.setProperty('--bf-y', ((Math.random() - 0.5) * 30) + 'px');
+    el.style.setProperty('--bf-r', ((Math.random() - 0.5) * 6) + 'deg');
+    el.style.animationDelay = (Math.random() * 10) + 's';
+    el.style.opacity = (0.04 + Math.random() * 0.05);
+    container.appendChild(el);
+  }
+}
+// Create default background for start screen
+createBgArt(null);
+
 
 // =====================================================
 //  DIFFICULTY
@@ -1422,6 +1477,7 @@ function goHome() {
 // =====================================================
 const CORS_PROXIES = [
   'https://api.allorigins.win/raw?url=',
+  'https://api.codetabs.com/v1/proxy?quest=',
   'https://corsproxy.io/?',
 ];
 
@@ -1495,6 +1551,9 @@ async function startGame() {
     if(songs.length<10) throw new Error('可用歌曲不足');
 
     state.songs=songs;
+    // Refresh background with real album art
+    const artworks = [...new Set(songs.map(s => s.artwork).filter(Boolean))];
+    createBgArt(artworks);
     state.difficulty=selectedDifficulty;
     state.round=0;
     state.score=0;
@@ -1569,8 +1628,6 @@ function nextRound() {
   state.answered=false;
   state.audioFailed=false;
   state.isPlaying=false;
-  if(state._useProxy===undefined) state._useProxy=false;
-
   if(state.timerId) clearTimeout(state.timerId);
 
   document.getElementById('scoreDisplay').textContent=state.score;
@@ -1774,22 +1831,12 @@ function playClip() {
   const errHint=document.getElementById('errHint');
   const bigBtn=document.getElementById('btnPlayBig');
   const playIcon=document.getElementById('playIcon');
-  const proxyHint=document.getElementById('proxyHint');
 
   if(state.timerId) clearTimeout(state.timerId);
   audio.pause();
 
-  // Determine which URL to use: if previous attempts failed via proxy, alternate
-  const useProxy = state._useProxy||false;
-  if(useProxy) {
-    audio.crossOrigin='anonymous';
-    audio.src=CORS_PROXIES[0]+encodeURIComponent(song.previewUrl);
-    proxyHint.style.display='block';
-  } else {
-    audio.crossOrigin='';
-    audio.src=song.previewUrl;
-    proxyHint.style.display='none';
-  }
+  audio.crossOrigin='';
+  audio.src=song.previewUrl;
   audio.currentTime=0;
   audio.volume=0.8;
 
@@ -1805,30 +1852,21 @@ function playClip() {
   if(playPromise!==undefined) {
     playPromise.then(()=>{
       bufHint.style.display='none';
-      info.textContent='🎵 播放中 ('+displaySeconds(cfg.clipSec)+') · 第'+state.round+'题'+(useProxy?' ⚡(代理)':'');
+      info.textContent='🎵 播放中 ('+displaySeconds(cfg.clipSec)+') · 第'+state.round+'题';
       bigBtn.classList.remove('show');
       state.audioFailed=false;
-      state._useProxy=useProxy; // remember working mode
     }).catch(e=>{
-      console.warn('Play failed:', e.message, '(proxy='+useProxy+')');
+      console.warn('Play failed:', e.message);
       state.isPlaying=false;
       clearVisualizer();
       if(playIcon) playIcon.textContent='▶';
-
-      // If direct failed, try proxy; if proxy already failed, show error
-      if(!useProxy) {
-        state._useProxy=true;
-        bufHint.textContent='⏳ 直连失败，尝试代理...';
-        setTimeout(()=>playClip(),300);
-      } else {
-        bigBtn.classList.add('show');
-        bigBtn.textContent='🔄 点击重试';
-        info.textContent='👆 点击重试音频';
-        bufHint.style.display='none';
-        errHint.style.display='block';
-        errHint.textContent='⚠️ 音频加载失败，点击重试或继续答题';
-        state.audioFailed=true;
-      }
+      bigBtn.classList.add('show');
+      bigBtn.textContent='▶ 点击播放';
+      info.textContent='👆 点击播放音频';
+      bufHint.style.display='none';
+      errHint.style.display='block';
+      errHint.textContent='⚠️ 音频加载失败，点击重试或继续答题';
+      state.audioFailed=true;
     });
   }
 
@@ -1849,20 +1887,8 @@ function playClip() {
 
   audio.onerror=()=>{
     bufHint.style.display='none';
-    proxyHint.style.display='none';
-
-    // Try proxy fallback if direct failed and not answered yet
-    if(!useProxy && !state.answered) {
-      state._useProxy=true;
-      bufHint.textContent='⏳ 直连失败，尝试代理模式...';
-      bufHint.style.display='block';
-      errHint.style.display='none';
-      setTimeout(()=>playClip(),300);
-      return;
-    }
-
     errHint.style.display='block';
-    errHint.textContent='⚠️ 音频加载失败';
+    errHint.textContent='⚠️ 音频加载失败，点击重试';
     bigBtn.classList.add('show');
     bigBtn.textContent='🔄 点击重试';
     clearVisualizer(); state.isPlaying=false;
