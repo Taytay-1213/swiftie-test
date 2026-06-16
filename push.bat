@@ -13,22 +13,13 @@ git add -A
 git diff --cached --quiet
 set STAGED=%errorlevel%
 
-:: Check for unpushed commits
-git log origin/main..HEAD --oneline >nul 2>&1
-set UNPUSHED=%errorlevel%
-
-:: If nothing staged AND nothing unpushed, exit
-if %STAGED%==0 if %UNPUSHED%==0 (
-    echo [OK] Nothing to push.
-    pause
-    exit /b
-)
-
 :: Auto commit if there are staged changes
 if %STAGED%==1 (
     for /f "tokens=1-3 delims=/ " %%a in ('date /t') do set d=%%a%%b%%c
     for /f "tokens=1-2 delims=: " %%a in ('time /t') do set t=%%a%%b
     git commit -m "update %d%_%t%"
+) else (
+    echo [OK] No new changes to commit.
 )
 
 :: Push
